@@ -143,10 +143,12 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 .b-isl {background:rgba(239,68,68,.2);color:var(--r2);border:1px solid rgba(239,68,68,.35)}
 .b-safe{background:rgba(16,185,129,.2);color:var(--g2);border:1px solid rgba(16,185,129,.35)}
 .b-chg {background:rgba(245,158,11,.2);color:var(--o2);border:1px solid rgba(245,158,11,.35)}
+.b-wait{background:rgba(245,158,11,.18);color:var(--o2);border:1px solid rgba(245,158,11,.4)}
 
 /* ── LOG ITEM ── */
 .li{background:var(--card2);border-radius:11px;padding:11px;margin-bottom:7px;border:1px solid var(--border)}
 .li.isl{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.04)}
+.li.pending{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.03)}
 .lt{display:flex;justify-content:space-between;align-items:flex-start}
 .lmain{font-size:18px;font-weight:900;line-height:1}
 .ldate{font-size:9px;color:var(--sub);margin-bottom:2px}
@@ -237,6 +239,10 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
       <div class="hdr-badge hb-total">
         <div class="hdr-badge-n" id="hdr-total">0</div>
         <div class="hdr-badge-l">総記録</div>
+      </div>
+      <div class="hdr-badge" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35)">
+        <div class="hdr-badge-n" id="hdr-pending" style="color:var(--o2)">0</div>
+        <div class="hdr-badge-l">⏳ 待ち中</div>
       </div>
       <div class="hdr-badge hb-island">
         <div class="hdr-badge-n" id="hdr-island">0</div>
@@ -978,8 +984,9 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 <!-- ===== LOG TAB ===== -->
 <div id="tab-log" class="sec">
   <div class="sec-title">📋 ログ <span id="log-cnt" style="font-size:12px;color:var(--sub)"></span></div>
-  <div style="display:flex;gap:6px;margin-bottom:10px">
+  <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
     <button class="btn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--a2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('all')">全件</button>
+    <button class="btn" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:var(--o2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('pending')">⏳ 待ち中</button>
     <button class="btn" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--r2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('island')">🏝 島流し</button>
     <button class="btn" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--g2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('safe')">✅ 安全</button>
   </div>
@@ -1525,15 +1532,19 @@ function toggleBulkIsl(){
 function saveRec(){
   const date=document.getElementById('r-date').value;
   const ot=document.getElementById('r-ot').value;
+  if(!date||!ot){ alert('注文日・注文時刻は必須です'); return; }
+
   const md=document.getElementById('r-md').value;
   const mt=document.getElementById('r-mt').value;
-  const wait=parseFloat(document.getElementById('r-wait').value);
-  if(!date||!ot||!md||!mt||isNaN(wait)){ alert('注文日・注文時刻・ごちゅあり到着日・到着時刻を入力してください'); return; }
+  const waitRaw=parseFloat(document.getElementById('r-wait').value);
+  const pending = !md || !mt || isNaN(waitRaw); // ごちゅあり未着
+  const wait = pending ? null : waitRaw;
 
   const modelVal=document.getElementById('r-model').value;
   const isIsl=document.getElementById('r-isl').checked;
   const rec={
-    id:Date.now(), date, orderTime:ot, mailDate:md, mailTime:mt, wait,
+    id:Date.now(), date, orderTime:ot,
+    mailDate:md||'', mailTime:mt||'', wait, pending,
     model:modelVal,
     qty:parseInt(document.getElementById('r-qty').value)||1,
     account:SEL.account||'', acctRole:SEL['acct-role']||'',
@@ -1718,6 +1729,7 @@ function renderIslandGuide(){
 // ============================================================
 function updateHeader(){
   document.getElementById('hdr-total').textContent=recs.length;
+  document.getElementById('hdr-pending').textContent=recs.filter(r=>r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait)).length;
   document.getElementById('hdr-island').textContent=recs.filter(r=>r.isIsl).length;
 }
 
@@ -2142,22 +2154,33 @@ function filterLog(f){ logFilter=f; renderLog(); }
 function renderLog(){
   const el=document.getElementById('log-content');
   let data=recs;
-  if(logFilter==='island') data=recs.filter(r=>r.isIsl);
-  if(logFilter==='safe')   data=recs.filter(r=>!r.isIsl);
+  if(logFilter==='pending') data=recs.filter(r=>r.pending);
+  if(logFilter==='island')  data=recs.filter(r=>r.isIsl&&!r.pending);
+  if(logFilter==='safe')    data=recs.filter(r=>!r.isIsl&&!r.pending);
   document.getElementById('log-cnt').textContent=`(${data.length}件表示)`;
   if(!data.length){ el.innerHTML='<div class="empty">該当する記録がありません</div>'; return; }
-  el.innerHTML=data.map(r=>`
-    <div class="li ${r.isIsl?'isl':''}">
+  el.innerHTML=data.map(r=>{
+    const isPending=r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait);
+    const liClass=isPending?'pending':r.isIsl?'isl':'';
+    const statusBadge=isPending
+      ? '<span class="bd b-wait">⏳ ごちゅあり待ち</span>'
+      : r.isIsl
+        ? '<span class="bd b-isl">🏝 島流し</span>'
+        : '<span class="bd b-safe">✅ 安全</span>';
+    const waitDisp=isPending
+      ? `<span style="font-size:13px;color:var(--o2);font-weight:700">ごちゅあり待ち中...</span>`
+      : `<span class="lmain">${r.wait}</span><span class="su">時間</span> ${speedBadge(r.wait)}`;
+    return `
+    <div class="li ${liClass}">
       <div class="lt">
         <div>
           <div class="ldate">${r.date}${r.orderTime?' '+r.orderTime:''}${r.mailDate&&r.mailDate!==r.date?' → '+r.mailDate+' '+r.mailTime:r.mailTime?' → '+r.mailTime:''}</div>
-          <div><span class="lmain">${r.wait}</span><span class="su">時間</span>
-            ${speedBadge(r.wait)}
-            ${r.isIsl?'<span class="bd b-isl">🏝 島流し</span>':'<span class="bd b-safe">✅ 安全</span>'}
-          </div>
+          <div>${waitDisp} ${statusBadge}</div>
         </div>
-        <button class="ldel" onclick="delRec(${r.id})">🗑</button>
-        <button class="ldel" onclick="openEditModal(${r.id})" style="color:var(--a2);margin-right:2px">✏️</button>
+        <div style="display:flex;gap:4px">
+          <button class="ldel" onclick="openEditModal(${r.id})" style="color:var(--a2)">✏️</button>
+          <button class="ldel" onclick="delRec(${r.id})">🗑</button>
+        </div>
       </div>
       <div class="ltags">
         ${r.model?`<span class="ltag">📱${r.model}</span>`:''}
@@ -2175,8 +2198,7 @@ function renderLog(){
         ${r.net?`<span class="ltag">${r.net}</span>`:''}
         ${r.device?`<span class="ltag">📱${r.device}</span>`:''}
         ${r.browser?`<span class="ltag">🌐${r.browser}</span>`:''}
-        ${(r.device&&r.browser)?`<span class="ltag" style="color:var(--o2)">→${r.device}×${r.browser}</span>`:''}        ${r.notif?`<span class="ltag">${r.notif}</span>`:''}
-        ${r.opSec>0?`<span class="ltag">⏱操作${r.opSec}秒</span>`:''}
+        ${(r.device&&r.browser)?`<span class="ltag" style="color:var(--o2)">→${r.device}×${r.browser}</span>`:''}
         ${r.delivery?`<span class="ltag">${r.delivery}</span>`:''}
         ${r.payment?`<span class="ltag">${r.payment}</span>`:''}
         ${r.ccBrand?`<span class="ltag">💳${r.ccBrand}${r.ccType?'('+r.ccType+')':''}${r.ccLast4?' *'+r.ccLast4:''}</span>`:''}
@@ -2192,7 +2214,8 @@ function renderLog(){
         ${r.memo?`<span class="ltag">📝${r.memo}</span>`:''}
         ${r.source==='bulk'?`<span class="ltag" style="color:var(--sub)">一括</span>`:''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ============================================================
@@ -2312,6 +2335,8 @@ function saveEdit(){
   recs[idx]={
     ...recs[idx],
     date:get('e-date'), orderTime:get('e-ot'), mailDate:get('e-md'), mailTime:get('e-mt'),
+    wait: (get('e-md')&&get('e-mt')&&!isNaN(parseFloat(get('e-wait')))) ? parseFloat(get('e-wait')) : null,
+    pending: !(get('e-md')&&get('e-mt')&&!isNaN(parseFloat(get('e-wait')))),
     wait:getN('e-wait'), model:get('e-model'),
     qty:parseInt(get('e-qty'))||1, orderNo:get('e-order-no'),
     account:get('e-account'), acctRole:get('e-acct-role'),
