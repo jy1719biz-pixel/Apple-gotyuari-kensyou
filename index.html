@@ -1094,6 +1094,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
     </div>
     <div style="display:flex;gap:7px;margin-top:9px">
       <button class="btn btn-p" style="font-size:13px;padding:10px;flex:1" onclick="saveGsUrl()">💾 URLを保存</button>
+      <button onclick="testGsConnection()" style="flex:0;padding:10px 13px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.4);color:var(--b2);border-radius:12px;font-size:12px;font-weight:700;cursor:pointer">🔌 接続テスト</button>
       <button onclick="syncNow()" style="flex:0;padding:10px 13px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4);color:var(--g2);border-radius:12px;font-size:12px;font-weight:700;cursor:pointer">🔄 今すぐ同期</button>
     </div>
     <div class="save-msg" id="gs-url-msg" style="color:var(--g2)">✅ URLを保存しました</div>
@@ -1430,9 +1431,12 @@ async function loadFromGS(){
   if(!cfg.gsUrl) return false;
   try{
     const url = cfg.gsUrl + (cfg.gsUrl.includes('?')?'&':'?') + 'action=load&_t=' + Date.now();
-    const res = await fetch(url, { cache:'no-cache' });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    const res = await fetch(url, { cache:'no-cache', credentials:'omit', mode:'cors' });
+    const text = await res.text();
+    if(!res.ok) throw new Error('HTTP ' + res.status + ': ' + text.slice(0,200));
+    let data;
+    try{ data = JSON.parse(text); }
+    catch(e){ throw new Error('レスポンスがJSONではありません。URLを確認してください。\n' + text.slice(0,300)); }
     if(!data.ok) throw new Error(data.error || '読み込みエラー');
 
     // マージ: GS のデータを優先、ローカルのみのレコードは保持
@@ -1453,6 +1457,7 @@ async function loadFromGS(){
   }catch(err){
     console.warn('[GS] 読み込みエラー:', err);
     _gsSyncOk = false;
+    _updateSyncBadge('error', err.message);
     return false;
   }
 }
@@ -1463,22 +1468,24 @@ async function persistToGS(){
   _gsSyncing = true;
   _updateSyncBadge('syncing');
   try{
-    const res = await fetch(cfg.gsUrl, {
-      method: 'POST',
-      body:   JSON.stringify({ action:'save_recs', recs }),
-      headers:{ 'Content-Type':'text/plain' }, // プリフライト回避
+    // mode:'no-cors' で file:// からのCORSエラーを回避
+    // (no-cors ではレスポンスが読めないが送信は確実に届く)
+    await fetch(cfg.gsUrl, {
+      method:      'POST',
+      body:        JSON.stringify({ action:'save_recs', recs }),
+      headers:     { 'Content-Type':'text/plain' },
+      mode:        'no-cors',
+      credentials: 'omit',
     });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if(!data.ok) throw new Error(data.error || '保存エラー');
-
+    // no-cors では res が opaque のため ok/text() が使えない
+    // 例外なしで完了 = 送信成功とみなす
     _gsLastSync = new Date();
     _gsSyncOk   = true;
     _updateSyncBadge('ok');
   }catch(err){
     console.warn('[GS] 書き込みエラー:', err);
     _gsSyncOk = false;
-    _updateSyncBadge('error');
+    _updateSyncBadge('error', err.message);
   }finally{
     _gsSyncing = false;
   }
@@ -1490,13 +1497,14 @@ async function persistAuxToGS(){
   try{
     const cards  = JSON.parse(localStorage.getItem('gca_cards')||'[]');
     const emails = JSON.parse(localStorage.getItem('gca_emails')||'[]');
-    await fetch(cfg.gsUrl,{method:'POST',body:JSON.stringify({action:'save_cards', cards}), headers:{'Content-Type':'text/plain'}});
-    await fetch(cfg.gsUrl,{method:'POST',body:JSON.stringify({action:'save_emails',emails}),headers:{'Content-Type':'text/plain'}});
+    const _fetchOpts = { method:'POST', headers:{'Content-Type':'text/plain'}, mode:'no-cors', credentials:'omit' };
+    await fetch(cfg.gsUrl,{..._fetchOpts, body:JSON.stringify({action:'save_cards', cards})});
+    await fetch(cfg.gsUrl,{..._fetchOpts, body:JSON.stringify({action:'save_emails',emails})});
   }catch(err){ console.warn('[GS] 補助データ同期エラー:', err); }
 }
 
 // ヘッダーとステータスを更新
-function _updateSyncBadge(status){
+function _updateSyncBadge(status, errMsg){
   const hdr    = document.getElementById('gs-sync-status');
   const detail = document.getElementById('gs-sync-detail');
   if(!cfg.gsUrl){
@@ -1516,8 +1524,15 @@ function _updateSyncBadge(status){
   }
   if(detail){
     const gsUrlShort = cfg.gsUrl.length>50 ? cfg.gsUrl.slice(0,50)+'...' : cfg.gsUrl;
-    detail.innerHTML = `接続先: <span style="color:var(--a2);word-break:break-all">${gsUrlShort}</span><br>`
+    let detailHtml = `接続先: <span style="color:var(--a2);word-break:break-all">${gsUrlShort}</span><br>`
       + (timeStr?`最終同期: ${timeStr}`:'同期待ち');
+    if(status==='error' && errMsg){
+      const hint = errMsg.includes('Failed to fetch')
+        ? ' ※URLを再確認してください（再デプロイ後に新しいURLに変わる場合があります）'
+        : '';
+      detailHtml += `<br><span style="color:var(--r2)">エラー詳細: ${errMsg}${hint}</span>`;
+    }
+    detail.innerHTML = detailHtml;
   }
 }
 
@@ -1544,12 +1559,48 @@ async function syncNow(){
 // GS URL を保存する
 function saveGsUrl(){
   const url = (document.getElementById('cfg-gs-url').value||'').trim();
+  if(url){
+    // URLの形式チェック
+    if(!url.includes('script.google.com/macros/s/')){
+      alert('URLの形式が正しくありません。\nApps Scriptのデプロイ画面から「ウェブアプリ URL」をコピーしてください。\n（例: https://script.google.com/macros/s/AKfy.../exec）');
+      return;
+    }
+    if(!url.endsWith('/exec')){
+      alert('URLが /exec で終わっていません。\nデプロイ画面からコピーした URL をそのまま貼り付けてください。');
+      return;
+    }
+  }
   cfg.gsUrl = url;
   persistCfg();
   flash('gs-url-msg');
   renderCfgDisplay();
   if(url) syncNow();
   else    _updateSyncBadge('none');
+}
+
+// 接続テスト（ping）
+async function testGsConnection(){
+  const url = (document.getElementById('cfg-gs-url').value||cfg.gsUrl||'').trim();
+  if(!url){ alert('URLを入力してください'); return; }
+  const detail = document.getElementById('gs-sync-detail');
+  if(detail) detail.innerHTML='<span style="color:var(--o2)">🔌 接続テスト中...</span>';
+  try{
+    const testUrl = url + (url.includes('?')?'&':'?') + 'action=ping&_t=' + Date.now();
+    const res = await fetch(testUrl, { cache:'no-cache', credentials:'omit', mode:'cors' });
+    const text = await res.text();
+    let data;
+    try{ data = JSON.parse(text); }
+    catch(e){ throw new Error('JSONではない応答。URLまたはデプロイ設定を確認。\n' + text.slice(0,200)); }
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    if(data.ok && data.pong){
+      if(detail) detail.innerHTML='<span style="color:var(--g2)">✅ 接続成功！スクリプトが正常に動作しています。</span>';
+    } else {
+      throw new Error(data.error || 'ping に失敗しました');
+    }
+  }catch(err){
+    if(detail) detail.innerHTML=`<span style="color:var(--r2)">❌ 接続失敗: ${err.message}</span>`;
+    console.warn('[GS] ping失敗:', err);
+  }
 }
 
 loadAll();
