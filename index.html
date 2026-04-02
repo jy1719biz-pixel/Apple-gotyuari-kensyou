@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ごちゅあり＆島流し解析 v3</title>
+<title>ごちゅあり＆島流し解析 v4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -224,6 +224,42 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
   font-size:14px;color:var(--sub);padding:0 4px;
   background:none;border:none;cursor:pointer;line-height:1;
 }
+
+/* ── RISK METER ── */
+.risk-card{border-color:rgba(245,158,11,.35);background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(239,68,68,.04))}
+.risk-bar-bg{height:10px;background:var(--card2);border-radius:5px;overflow:hidden;margin:7px 0 4px}
+.risk-bar-fill{height:10px;border-radius:5px;transition:width .4s ease,background .4s ease}
+.risk-num{font-size:34px;font-weight:900;line-height:1;transition:color .4s}
+.risk-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.risk-label{font-size:11px;font-weight:700;margin-top:2px}
+.risk-factors{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.risk-factor{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}
+.rf-up{background:rgba(239,68,68,.15);color:var(--r2)}
+.rf-down{background:rgba(16,185,129,.15);color:var(--g2)}
+
+/* ── HISTOGRAM ── */
+.hist-wrap{display:flex;align-items:flex-end;gap:3px;height:90px;padding-bottom:2px}
+.hist-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px}
+.hist-bar{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .5s}
+.hist-lbl{font-size:7.5px;color:var(--sub);text-align:center;line-height:1.2;margin-top:2px}
+.hist-cnt{font-size:8px;color:var(--sub2);font-weight:700;margin-bottom:1px}
+
+/* ── ACCOUNT TIMELINE ── */
+.tl-acct{margin-bottom:14px}
+.tl-head{font-size:11px;font-weight:700;color:var(--a2);padding:5px 10px;background:rgba(124,58,237,.1);border-radius:7px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.tl-item{display:flex;gap:8px;margin-bottom:4px;padding:6px 9px;background:var(--card2);border-radius:8px;border-left:3px solid var(--border2);align-items:flex-start}
+.tl-item.tl-safe{border-left-color:var(--green)}
+.tl-item.tl-isl{border-left-color:var(--red)}
+.tl-item.tl-pend{border-left-color:var(--orange)}
+.tl-date{font-size:9px;color:var(--sub);width:75px;flex-shrink:0;padding-top:1px}
+.tl-body{flex:1;font-size:10px;line-height:1.6}
+
+/* ── WINNING PATTERNS ── */
+.pat-item{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.22);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.pat-rank{font-size:20px;font-weight:900;color:var(--g2)}
+.pat-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.pat-tag{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;background:rgba(16,185,129,.15);color:var(--g2)}
+.pat-stat{font-size:10px;color:var(--sub2);margin-top:5px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -233,7 +269,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
   <div class="hdr-row">
     <div>
       <div class="hdr-title">📨 ごちゅあり＆島流し解析</div>
-      <div class="hdr-sub">Apple注文アルゴリズム完全解明ツール v3</div>
+      <div class="hdr-sub" id="gs-sync-status">Apple注文アルゴリズム完全解明ツール v4</div>
     </div>
     <div class="hdr-badges">
       <div class="hdr-badge hb-total">
@@ -265,6 +301,22 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 <!-- ===== RECORD TAB ===== -->
 <div id="tab-record" class="sec active">
   <div class="sec-title">新しい注文を記録</div>
+
+  <!-- ① リアルタイム危険度スコア -->
+  <div class="card risk-card" id="risk-meter-card">
+    <div class="card-title">⚡ リアルタイム島流し危険度</div>
+    <div class="risk-row">
+      <div>
+        <div class="risk-num" id="risk-num">—</div>
+        <div class="risk-label" id="risk-label" style="color:var(--sub)">入力すると計算されます</div>
+      </div>
+      <div style="flex:1;max-width:180px">
+        <div class="risk-bar-bg"><div class="risk-bar-fill" id="risk-bar" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--sub)"><span>安全</span><span>危険</span></div>
+      </div>
+    </div>
+    <div class="risk-factors" id="risk-factors"></div>
+  </div>
 
   <div class="card">
     <div class="card-title">📅 基本情報</div>
@@ -418,6 +470,14 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
         <div class="chip" data-g="delivery" data-v="ヤマト運輸営業所">🚚 ヤマト営業所</div>
       </div>
     </div>
+    <div class="fr" style="margin-top:10px"><label class="fl">③ 配送先住所の新規度 <span style="color:var(--accent);font-size:9px">── 住所の使用履歴</span></label>
+      <div class="cg">
+        <div class="chip" data-g="addr-novelty" data-v="初回使用">🏠 初回使用</div>
+        <div class="chip" data-g="addr-novelty" data-v="過去使用済み">♻️ 過去使用済み</div>
+        <div class="chip" data-g="addr-novelty" data-v="転送先住所">📦 転送先</div>
+        <div class="chip" data-g="addr-novelty" data-v="住所変更後">🔄 住所変更後</div>
+      </div>
+    </div>
     <div class="fr" style="margin-top:10px"><label class="fl">支払い方法</label>
       <div class="cg">
         <div class="chip" data-g="payment" data-v="Apple Pay">💳 Apple Pay</div>
@@ -530,6 +590,17 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
     <div class="fr"><label class="fl">曜日 <span style="color:var(--accent);font-size:9px">── 注文日から自動取得</span></label>
       <div id="r-weekday-display" style="font-size:13px;color:var(--a2);font-weight:700;padding:4px 0">注文日を選択すると自動入力されます</div>
       <input type="hidden" id="r-weekday">
+    </div>
+    <div class="fg2" style="margin-top:10px">
+      <div class="fr"><label class="fl">④ カート→決済完了（秒）<span style="color:var(--accent);font-size:9px"> ── 操作速度</span></label>
+        <input type="number" class="fi" id="r-cart-sec" placeholder="例: 45" min="0" step="1">
+      </div>
+      <div class="fr"><label class="fl">⑤ 前回注文からの経過日数 <span style="color:var(--accent);font-size:9px">── 自動計算</span></label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" class="fi" id="r-days-since" readonly placeholder="日付入力で自動計算" style="color:var(--a2);font-weight:700;flex:1">
+          <span style="font-size:11px;color:var(--sub);white-space:nowrap">日前</span>
+        </div>
+      </div>
     </div>
     <div class="fr" style="margin-top:10px"><label class="fl">同時に持っていた注文数（この注文除く）</label>
       <div class="cg">
@@ -978,6 +1049,16 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
   <!-- AI結果エリア -->
   <div id="ai-result" style="display:none;margin-bottom:14px"></div>
 
+
+  <!-- ② ごちゅあり到着時間 ヒストグラム -->
+  <div id="ana-histogram" style="margin-bottom:14px"></div>
+
+  <!-- ⑧ 勝ちパターン自動抽出 -->
+  <div id="ana-patterns" style="margin-bottom:14px"></div>
+
+  <!-- ⑨ アカウント別タイムライン -->
+  <div id="ana-timeline" style="margin-bottom:14px"></div>
+
   <div id="ana-content"></div>
 </div>
 
@@ -996,6 +1077,29 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 <!-- ===== SETTINGS TAB ===== -->
 <div id="tab-settings" class="sec">
   <div class="sec-title">⚙️ 設定</div>
+
+  <!-- ☁️ Google Sheets 連携 -->
+  <div class="card" style="border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.02)">
+    <div class="card-title" style="color:var(--g2)">☁️ Googleスプレッドシート連携</div>
+    <div style="font-size:11px;color:var(--sub2);margin-bottom:10px;line-height:1.75">
+      Apps Script ウェブアプリ URL を設定すると、スマホ・PC・タブレット<br>
+      どの端末からでもデータを閲覧・編集・追加できます。<br>
+      <span style="color:var(--a2)">▶ 設定方法は「セットアップ手順.md」を参照してください</span>
+    </div>
+    <div class="fr">
+      <label class="fl">Apps Script ウェブアプリ URL</label>
+      <input type="url" class="fi" id="cfg-gs-url"
+        placeholder="https://script.google.com/macros/s/.../exec"
+        style="font-size:11px;word-break:break-all">
+    </div>
+    <div style="display:flex;gap:7px;margin-top:9px">
+      <button class="btn btn-p" style="font-size:13px;padding:10px;flex:1" onclick="saveGsUrl()">💾 URLを保存</button>
+      <button onclick="syncNow()" style="flex:0;padding:10px 13px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4);color:var(--g2);border-radius:12px;font-size:12px;font-weight:700;cursor:pointer">🔄 今すぐ同期</button>
+    </div>
+    <div class="save-msg" id="gs-url-msg" style="color:var(--g2)">✅ URLを保存しました</div>
+    <div id="gs-sync-detail" style="font-size:10px;color:var(--sub2);margin-top:7px;line-height:1.9"></div>
+  </div>
+
   <div class="card">
     <div class="card-title">🏝 島流し判定しきい値</div>
     <div class="set-row">
@@ -1013,6 +1117,18 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
   <div class="card">
     <div class="card-title">📊 現在の設定確認</div>
     <div id="cfg-display" style="font-size:11px;color:var(--sub2);line-height:2"></div>
+  </div>
+
+
+  <div class="card" style="border-color:rgba(59,130,246,.25)">
+    <div class="card-title" style="color:var(--b2)">⑦ データインポート（JSON）</div>
+    <div style="font-size:11px;color:var(--sub2);margin-bottom:8px;line-height:1.7">エクスポートしたJSONファイルを読み込み、既存データとマージします。重複（同一ID）は自動スキップされます。</div>
+    <label style="display:block;width:100%;padding:10px;border-radius:10px;border:1.5px dashed var(--border2);text-align:center;cursor:pointer;font-size:12px;color:var(--sub2);background:var(--card2)">
+      📂 JSONファイルを選択
+      <input type="file" accept=".json" id="import-file-input" style="display:none" onchange="importData(this)">
+    </label>
+    <div class="save-msg" id="import-msg" style="color:var(--b2)">✅ インポート完了</div>
+    <div id="import-result" style="font-size:11px;color:var(--sub2);margin-top:6px;line-height:1.7"></div>
   </div>
 
   <div class="card" style="border-color:rgba(239,68,68,.25)">
@@ -1240,6 +1356,19 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
       <input type="text" class="fi" id="e-tradein-model" placeholder="例: iPhone 15 Pro">
     </div>
 
+
+    <div class="edit-section">🏠 住所・操作時間</div>
+    <div class="fg2">
+      <div class="fr"><label class="fl">配送先住所の新規度</label>
+        <select class="fi" id="e-addr-novelty">
+          <option value="">──</option>
+          <option>初回使用</option><option>過去使用済み</option><option>転送先住所</option><option>住所変更後</option>
+        </select>
+      </div>
+      <div class="fr"><label class="fl">カート→決済（秒）</label>
+        <input type="number" class="fi" id="e-cart-sec" min="0" step="1" placeholder="例: 45">
+      </div>
+    </div>
     <div class="edit-section">🏝 島流し</div>
     <div class="tog-row" style="margin-bottom:10px">
       <div class="tog-lbl">島流しになった</div>
@@ -1271,7 +1400,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 // STATE
 // ============================================================
 let recs = [];
-let cfg = { mailMin:60, processingH:24 };
+let cfg = { mailMin:60, processingH:24, gsUrl:'' };
 const SEL = {};   // record tab
 const BSEL = {};  // bulk tab
 const MULTI = {}; // multi-select groups
@@ -1281,14 +1410,162 @@ function loadAll(){
   try{ const d=localStorage.getItem('gca_v3'); if(d) recs=JSON.parse(d); }catch(e){ recs=[]; }
   try{ const c=localStorage.getItem('gca_cfg'); if(c) cfg=Object.assign(cfg,JSON.parse(c)); }catch(e){}
 }
-function persist(){ localStorage.setItem('gca_v3',JSON.stringify(recs)); }
-function persistCfg(){ localStorage.setItem('gca_cfg',JSON.stringify(cfg)); }
+function persist(){
+  localStorage.setItem('gca_v3',JSON.stringify(recs));
+  if(cfg.gsUrl) persistToGS(); // バックグラウンドでGS同期
+}
+function persistCfg(){
+  localStorage.setItem('gca_cfg',JSON.stringify(cfg));
+}
+
+// ============================================================
+// GOOGLE SHEETS 連携
+// ============================================================
+let _gsSyncing = false;
+let _gsLastSync = null;
+let _gsSyncOk = null; // true=成功 false=失敗 null=未実行
+
+// GS から全データを読み込み（async）
+async function loadFromGS(){
+  if(!cfg.gsUrl) return false;
+  try{
+    const url = cfg.gsUrl + (cfg.gsUrl.includes('?')?'&':'?') + 'action=load&_t=' + Date.now();
+    const res = await fetch(url, { cache:'no-cache' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || '読み込みエラー');
+
+    // マージ: GS のデータを優先、ローカルのみのレコードは保持
+    const gsIds = new Set((data.recs||[]).map(r=>r.id));
+    const localOnly = recs.filter(r => !gsIds.has(r.id));
+    recs = [...(data.recs||[]), ...localOnly];
+    recs.sort((a,b)=>(b.id||0)-(a.id||0));
+
+    // cfg・カード・メアドもGSから復元（存在する場合）
+    if(data.cfg)    cfg    = Object.assign(cfg, data.cfg);
+    if(data.cards)  localStorage.setItem('gca_cards',  JSON.stringify(data.cards));
+    if(data.emails) localStorage.setItem('gca_emails', JSON.stringify(data.emails));
+
+    localStorage.setItem('gca_v3', JSON.stringify(recs));
+    _gsLastSync = new Date();
+    _gsSyncOk   = true;
+    return true;
+  }catch(err){
+    console.warn('[GS] 読み込みエラー:', err);
+    _gsSyncOk = false;
+    return false;
+  }
+}
+
+// GS へ全データを書き込み（async・バックグラウンド）
+async function persistToGS(){
+  if(!cfg.gsUrl || _gsSyncing) return;
+  _gsSyncing = true;
+  _updateSyncBadge('syncing');
+  try{
+    const res = await fetch(cfg.gsUrl, {
+      method: 'POST',
+      body:   JSON.stringify({ action:'save_recs', recs }),
+      headers:{ 'Content-Type':'text/plain' }, // プリフライト回避
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || '保存エラー');
+
+    _gsLastSync = new Date();
+    _gsSyncOk   = true;
+    _updateSyncBadge('ok');
+  }catch(err){
+    console.warn('[GS] 書き込みエラー:', err);
+    _gsSyncOk = false;
+    _updateSyncBadge('error');
+  }finally{
+    _gsSyncing = false;
+  }
+}
+
+// カード・メアド情報を GS に同期
+async function persistAuxToGS(){
+  if(!cfg.gsUrl) return;
+  try{
+    const cards  = JSON.parse(localStorage.getItem('gca_cards')||'[]');
+    const emails = JSON.parse(localStorage.getItem('gca_emails')||'[]');
+    await fetch(cfg.gsUrl,{method:'POST',body:JSON.stringify({action:'save_cards', cards}), headers:{'Content-Type':'text/plain'}});
+    await fetch(cfg.gsUrl,{method:'POST',body:JSON.stringify({action:'save_emails',emails}),headers:{'Content-Type':'text/plain'}});
+  }catch(err){ console.warn('[GS] 補助データ同期エラー:', err); }
+}
+
+// ヘッダーとステータスを更新
+function _updateSyncBadge(status){
+  const hdr    = document.getElementById('gs-sync-status');
+  const detail = document.getElementById('gs-sync-detail');
+  if(!cfg.gsUrl){
+    if(hdr)    hdr.textContent='Apple注文アルゴリズム完全解明ツール v4';
+    if(detail) detail.innerHTML='';
+    return;
+  }
+  const timeStr = _gsLastSync
+    ? _gsLastSync.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})
+    : '';
+  if(status==='syncing'){
+    if(hdr) hdr.innerHTML='<span style="color:var(--o2)">↕️ スプレッドシートと同期中...</span>';
+  }else if(status==='ok'){
+    if(hdr) hdr.innerHTML=`<span style="color:var(--g2)">☁️ GS同期済 ${timeStr}</span>`;
+  }else if(status==='error'){
+    if(hdr) hdr.innerHTML='<span style="color:var(--r2)">⚠️ GS同期エラー（ローカル保存済）</span>';
+  }
+  if(detail){
+    const gsUrlShort = cfg.gsUrl.length>50 ? cfg.gsUrl.slice(0,50)+'...' : cfg.gsUrl;
+    detail.innerHTML = `接続先: <span style="color:var(--a2);word-break:break-all">${gsUrlShort}</span><br>`
+      + (timeStr?`最終同期: ${timeStr}`:'同期待ち');
+  }
+}
+
+// 手動同期（設定タブのボタン用）
+async function syncNow(){
+  if(!cfg.gsUrl){ alert('URLが設定されていません'); return; }
+  _updateSyncBadge('syncing');
+  const ok = await loadFromGS();
+  if(ok){
+    updateHeader();
+    // 現在表示中のタブを再描画
+    const sec = document.querySelector('.sec.active');
+    if(sec){
+      const n = sec.id.replace('tab-','');
+      if(n==='log')      renderLog();
+      else if(n==='island')   renderIsland();
+      else if(n==='analysis') { renderAnalysis(); }
+    }
+  }
+  await persistToGS();
+  await persistAuxToGS();
+}
+
+// GS URL を保存する
+function saveGsUrl(){
+  const url = (document.getElementById('cfg-gs-url').value||'').trim();
+  cfg.gsUrl = url;
+  persistCfg();
+  flash('gs-url-msg');
+  renderCfgDisplay();
+  if(url) syncNow();
+  else    _updateSyncBadge('none');
+}
 
 loadAll();
 initDate();
 updateHeader();
 renderIslandGuide();
 renderCfgDisplay();
+
+// GS 連携が設定されていれば起動時に非同期ロード
+if(cfg.gsUrl){
+  _updateSyncBadge('syncing');
+  loadFromGS().then(ok=>{
+    if(ok){ updateHeader(); renderLog(); }
+    _updateSyncBadge(ok ? 'ok' : 'error');
+  });
+}
 
 // ============================================================
 // INIT
@@ -1332,6 +1609,8 @@ function setNowDate(id){
 // 曜日自動取得
 const WEEKDAYS = ['日','月','火','水','木','金','土'];
 document.getElementById('r-date').addEventListener('change', function(){
+  calcDaysSinceLast();
+  updateRiskScore();
   const d = new Date(this.value);
   if(!isNaN(d)){
     const w = WEEKDAYS[d.getDay()];
@@ -1586,6 +1865,9 @@ function saveRec(){
     islFix:isIsl?(SEL['isl-fix']||''):'',
     memo:document.getElementById('r-memo').value,
     orderNo:document.getElementById('r-order-no').value,
+    addrNovelty:SEL['addr-novelty']||'',
+    cartSec:parseInt(document.getElementById('r-cart-sec').value)||0,
+    daysSinceLast:parseInt(document.getElementById('r-days-since').value)||0,
     email:document.getElementById('r-email').value,
     emailType:SEL['email-type']||'',
     source:'record',
@@ -1593,13 +1875,14 @@ function saveRec(){
 
   recs.unshift(rec); persist(); updateHeader();
 
-  // カード情報・メアドを保存
+  // カード情報・メアドを保存（GS にも非同期同期）
   persistCard(rec.ccBrand, rec.ccType, rec.ccLast4, rec.ccIssuer);
   persistEmail(rec.email);
+  if(cfg.gsUrl) persistAuxToGS();
 
   // reset
   ['r-ot','r-mt','r-md','r-wait','r-memo','r-delay','r-ext','r-chgmail-h','r-workaround',
-   'r-cc-last4','r-cc-usecount','r-cc-issuer','r-tradein-model','r-tradein-serial','r-acct-num','r-order-no','r-email']
+   'r-cc-last4','r-cc-usecount','r-cc-issuer','r-tradein-model','r-tradein-serial','r-acct-num','r-order-no','r-email','r-cart-sec','r-days-since']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const rm=document.getElementById('r-model'); if(rm) rm.value='';
   const rq=document.getElementById('r-qty'); if(rq) rq.value='1';
@@ -1661,6 +1944,8 @@ function saveBulk(){
     orderNo:document.getElementById('b-order-no').value,
     email:document.getElementById('b-email').value,
     emailType:BSEL['email-type']||'',
+    addrNovelty:BSEL['addr-novelty']||'',
+    cartSec:0, daysSinceLast:0,
     source:'bulk',
   };
 
@@ -1729,7 +2014,7 @@ function renderIslandGuide(){
 // ============================================================
 function updateHeader(){
   document.getElementById('hdr-total').textContent=recs.length;
-  document.getElementById('hdr-pending').textContent=recs.filter(r=>r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait)).length;
+  document.getElementById('hdr-pending').textContent=recs.filter(r=>!r.isIsl&&(r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait))).length;
   document.getElementById('hdr-island').textContent=recs.filter(r=>r.isIsl).length;
 }
 
@@ -1799,6 +2084,7 @@ function renderIsland(){
   ${avoidChart('delivery','受け取り方法',recs)}
   ${avoidChart('payment','支払い方法',recs)}
   ${avoidChart('timeband','時間帯',recs)}
+  ${avoidChart('addrNovelty','住所新規度',recs)}
 
   ${islands.length>0?islandList(islands):'<div class="success-box">🎉 島流し記録がまだありません！</div>'}
   `;
@@ -2121,7 +2407,11 @@ function renderAnalysis(){
   ${waitChart('ccBrand','クレカブランド')}
   ${waitChart('tradein','下取り有無')}
   ${waitChart('serialUse','シリアル使用状況')}
+  ${waitChart('addrNovelty','住所新規度')}
   `;
+  renderHistogram();
+  renderWinningPatterns();
+  renderAccountTimeline();
 }
 
 function waitChart(field,label){
@@ -2161,11 +2451,12 @@ function renderLog(){
   if(!data.length){ el.innerHTML='<div class="empty">該当する記録がありません</div>'; return; }
   el.innerHTML=data.map(r=>{
     const isPending=r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait);
-    const liClass=isPending?'pending':r.isIsl?'isl':'';
-    const statusBadge=isPending
-      ? '<span class="bd b-wait">⏳ ごちゅあり待ち</span>'
-      : r.isIsl
-        ? '<span class="bd b-isl">🏝 島流し</span>'
+    // isIsl は pending より優先（島流し確定なら待機中より上位表示）
+    const liClass=r.isIsl?'isl':isPending?'pending':'';
+    const statusBadge=r.isIsl
+      ? '<span class="bd b-isl">🏝 島流し</span>'
+      : isPending
+        ? '<span class="bd b-wait">⏳ ごちゅあり待ち</span>'
         : '<span class="bd b-safe">✅ 安全</span>';
     const waitDisp=isPending
       ? `<span style="font-size:13px;color:var(--o2);font-weight:700">ごちゅあり待ち中...</span>`
@@ -2233,12 +2524,18 @@ function saveCfg(){
 function renderCfgDisplay(){
   const el=document.getElementById('cfg-display');
   if(!el) return;
+  const gsStatus = cfg.gsUrl
+    ? `<span style="color:var(--g2)">☁️ 有効</span> <span style="font-size:9px;color:var(--sub)">${cfg.gsUrl.slice(0,40)}...</span>`
+    : `<span style="color:var(--sub)">無効（ローカル保存のみ）</span>`;
   el.innerHTML=`
     ごちゅあり遅延判定: <b>${cfg.mailMin}分以上</b>で遅延とみなす<br>
-    処理中ステータス警戒: <b>${cfg.processingH}時間以上</b>
+    処理中ステータス警戒: <b>${cfg.processingH}時間以上</b><br>
+    GS連携: ${gsStatus}
   `;
   const mm=document.getElementById('cfg-mail-min');   if(mm) mm.value=cfg.mailMin;
   const ph=document.getElementById('cfg-processing-h');if(ph) ph.value=cfg.processingH;
+  // GS URL欄を現在値で埋める
+  const gu=document.getElementById('cfg-gs-url'); if(gu&&!gu.value) gu.value=cfg.gsUrl||'';
 }
 
 function exportData(){
@@ -2297,6 +2594,7 @@ function openEditModal(id){
   set('e-delay',r.delay||0); set('e-ext',r.ext||0);
   set('e-isl-end',r.islEnd||''); set('e-workaround',r.workaround||'');
   set('e-memo',r.memo||'');
+  set('e-addr-novelty',r.addrNovelty||''); set('e-cart-sec',r.cartSec||'');
 
   const modal=document.getElementById('edit-modal');
   modal.classList.add('open');
@@ -2358,12 +2656,334 @@ function saveEdit(){
     delay:getN('e-delay'), ext:getN('e-ext'),
     islEnd:get('e-isl-end'), workaround:get('e-workaround'),
     memo:get('e-memo'),
+    addrNovelty:get('e-addr-novelty'),
+    cartSec:parseInt(get('e-cart-sec'))||0,
   };
 
   persist(); updateHeader();
   persistEmail(recs[idx].email);
   flash('edit-save-msg');
   setTimeout(()=>{ document.getElementById('edit-modal').classList.remove('open'); editingId=null; renderLog(); }, 1200);
+}
+
+
+// ============================================================
+// ① リアルタイム危険度スコア
+// ============================================================
+const RISK_DEFAULTS = {
+  concurrent: {'0': -15, '1': 0, '2': 15, '3以上': 30},
+  net: {'Wi-Fi': -10, '4G': -5, '5G': -5, 'VPN使用': 20, 'VPN+Wi-Fi': 15},
+  account: {'新規': 10, '既存': -10, 'Family共有': 5, 'ゲスト': 5},
+  'acct-history': {'購入歴あり': -15, '購入歴なし': 10},
+  'acct-age': {'1ヶ月未満': 20, '1〜6ヶ月': 10, '6ヶ月〜1年': 0, '1年以上': -10, '5年以上': -15},
+  'return-hist': {'なし': -10, '1回あり': 5, '2〜3回あり': 15, '4回以上あり': 25},
+  tradein: {'あり': -8, 'なし': 0},
+  'carrier-contract': {'あり': -8, 'なし': 0},
+  browser: {'Apple Storeアプリ': -10, 'Safari': -5, 'Chrome': 0, 'Brave': 0, 'Firefox': 5, 'Edge': 5},
+  'serial-use': {'初使用（未使用シリアル）': -10, '使用済みシリアル': 5},
+  'addr-novelty': {'初回使用': 10, '過去使用済み': -10, '転送先住所': 5, '住所変更後': 10},
+};
+
+function calcRiskScore() {
+  let score = 50;
+  const factors = [];
+  const total = recs.length;
+
+  // qty risk
+  const qty = parseInt(document.getElementById('r-qty') ? document.getElementById('r-qty').value : 1) || 1;
+  if (qty >= 3) { score += 25; factors.push({l:'台数'+qty+'台', up:true}); }
+  else if (qty === 2) { score += 12; factors.push({l:'台数2台', up:true}); }
+
+  const FIELDS = ['concurrent','net','account','acct-history','acct-age','return-hist','tradein','carrier-contract','browser','serial-use','addr-novelty'];
+
+  FIELDS.forEach(field => {
+    const cur = SEL[field];
+    if (!cur) return;
+
+    let delta = 0;
+    // Use historical data if available
+    const matching = recs.filter(r => r[field] === cur);
+    if (matching.length >= 3) {
+      const islRate = pct(matching.filter(r => r.isIsl).length, matching.length);
+      delta = islRate - 30; // relative to 30% baseline
+    } else {
+      delta = (RISK_DEFAULTS[field] || {})[cur] || 0;
+    }
+
+    if (delta !== 0) {
+      score += delta;
+      factors.push({l: cur, up: delta > 0});
+    }
+  });
+
+  return { score: Math.max(0, Math.min(100, Math.round(score))), factors };
+}
+
+function updateRiskScore() {
+  const numEl = document.getElementById('risk-num');
+  const barEl = document.getElementById('risk-bar');
+  const lblEl = document.getElementById('risk-label');
+  const facEl = document.getElementById('risk-factors');
+  if (!numEl) return;
+
+  const { score, factors } = calcRiskScore();
+  numEl.textContent = score;
+
+  let col, lbl;
+  if (score < 35) { col = 'var(--green)'; lbl = '🟢 低リスク'; }
+  else if (score < 60) { col = 'var(--orange)'; lbl = '🟡 中リスク'; }
+  else { col = 'var(--red)'; lbl = '🔴 高リスク'; }
+
+  numEl.style.color = col;
+  barEl.style.width = score + '%';
+  barEl.style.background = col;
+  lblEl.textContent = lbl;
+  lblEl.style.color = col;
+
+  facEl.innerHTML = factors.slice(0, 8).map(f =>
+    `<span class="risk-factor ${f.up ? 'rf-up' : 'rf-down'}">${f.up ? '▲' : '▼'} ${f.l}</span>`
+  ).join('');
+}
+
+// Hook risk update into chip clicks (run after existing chip handlers)
+document.addEventListener('DOMContentLoaded', () => {});
+// Attach to all record-tab chips via mutation — simpler: patch the chip handler
+(function patchChipHandlers() {
+  const origChips = document.querySelectorAll('.chip[data-g]');
+  origChips.forEach(c => {
+    c.addEventListener('click', () => setTimeout(updateRiskScore, 10));
+  });
+  const qtyEl = document.getElementById('r-qty');
+  if (qtyEl) qtyEl.addEventListener('change', updateRiskScore);
+  const dateEl2 = document.getElementById('r-date');
+  if (dateEl2) dateEl2.addEventListener('change', calcDaysSinceLast);
+})();
+
+// ============================================================
+// ⑤ 前回注文からの経過日数
+// ============================================================
+function calcDaysSinceLast() {
+  const dateVal = document.getElementById('r-date').value;
+  const el = document.getElementById('r-days-since');
+  if (!el || !dateVal || !recs.length) { if (el) el.value = ''; return; }
+
+  const cur = new Date(dateVal).getTime();
+  const prev = recs
+    .filter(r => r.date && new Date(r.date).getTime() < cur && !r.isIsl)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (!prev.length) { el.value = ''; return; }
+  const diff = Math.round((cur - new Date(prev[0].date).getTime()) / 86400000);
+  el.value = diff;
+}
+
+// ============================================================
+// ② ごちゅあり到着時間 ヒストグラム
+// ============================================================
+function renderHistogram() {
+  const el = document.getElementById('ana-histogram');
+  if (!el) return;
+
+  const validRecs = recs.filter(r => r.wait !== null && r.wait !== undefined && !isNaN(r.wait) && r.wait >= 0);
+  if (validRecs.length < 3) { el.innerHTML = ''; return; }
+
+  const buckets = [
+    {lbl:'〜1h',max:1},
+    {lbl:'1〜3h',max:3},
+    {lbl:'3〜6h',max:6},
+    {lbl:'6〜12h',max:12},
+    {lbl:'12〜24h',max:24},
+    {lbl:'24〜48h',max:48},
+    {lbl:'48h+',max:Infinity}
+  ];
+
+  const counts = buckets.map((b, i) => {
+    const min = i === 0 ? 0 : buckets[i-1].max;
+    const n = validRecs.filter(r => r.wait >= min && r.wait < b.max).length;
+    const islN = validRecs.filter(r => r.wait >= min && r.wait < b.max && r.isIsl).length;
+    return { lbl: b.lbl, n, islN };
+  }).filter(b => b.n > 0 || true);
+
+  const maxN = Math.max(...counts.map(b => b.n), 1);
+  const total = validRecs.length;
+
+  const bars = counts.map(b => {
+    const h = Math.round(b.n / maxN * 80);
+    const col = b.n === 0 ? 'var(--border2)' : '#7c3aed';
+    const pctDisp = pct(b.n, total);
+    return `<div class="hist-col">
+      <div class="hist-cnt">${b.n > 0 ? b.n : ''}</div>
+      <div class="hist-bar" style="height:${Math.max(h,2)}px;background:${col}"></div>
+      <div class="hist-lbl">${b.lbl}<br>${pctDisp > 0 ? pctDisp+'%' : ''}</div>
+    </div>`;
+  }).join('');
+
+  // median line calculation
+  const sorted = [...validRecs].sort((a,b) => a.wait - b.wait);
+  const median = sorted[Math.floor(sorted.length/2)].wait.toFixed(1);
+  const avg_ = (validRecs.reduce((s,r) => s + r.wait, 0) / validRecs.length).toFixed(1);
+
+  el.innerHTML = `
+  <div class="card">
+    <div class="card-title">② 📊 ごちゅあり到着時間 分布ヒストグラム（${validRecs.length}件）</div>
+    <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+      <div class="sc" style="flex:1;min-width:60px"><div class="sv" style="font-size:18px;color:var(--a2)">${avg_}</div><div class="su">時間</div><div class="sl">平均</div></div>
+      <div class="sc" style="flex:1;min-width:60px"><div class="sv" style="font-size:18px;color:var(--g2)">${median}</div><div class="su">時間</div><div class="sl">中央値</div></div>
+      <div class="sc" style="flex:1;min-width:60px"><div class="sv" style="font-size:18px;color:var(--green)">${sorted[0].wait.toFixed(1)}</div><div class="su">時間</div><div class="sl">最速</div></div>
+    </div>
+    <div class="hist-wrap">${bars}</div>
+    <div style="font-size:10px;color:var(--sub);margin-top:6px;text-align:center">バーの高さ = 件数割合　横軸 = ごちゅあり到着時間</div>
+  </div>`;
+}
+
+// ============================================================
+// ⑧ 勝ちパターン自動抽出
+// ============================================================
+function renderWinningPatterns() {
+  const el = document.getElementById('ana-patterns');
+  if (!el) return;
+
+  const safes = recs.filter(r => !r.isIsl && r.wait !== null && !isNaN(r.wait));
+  if (safes.length < 3) { el.innerHTML = ''; return; }
+
+  const FIELDS = [
+    {k:'concurrent',l:'同時注文数'},{k:'account',l:'アカウント状態'},
+    {k:'acctRole',l:'アカウント種類'},{k:'net',l:'ネットワーク'},
+    {k:'browser',l:'ブラウザ/アプリ'},{k:'device',l:'注文端末'},
+    {k:'tradein',l:'下取り'},{k:'carrierContract',l:'回線契約'},
+    {k:'acctHistory',l:'iPhone購入歴'},{k:'acctAge',l:'アカ作成時期'},
+    {k:'returnHist',l:'返品歴'},{k:'payment',l:'支払い'},
+    {k:'delivery',l:'受取方法'},{k:'serialUse',l:'シリアル'},
+    {k:'addrNovelty',l:'住所新規度'},{k:'timeband',l:'時間帯'},
+  ];
+
+  const scores = [];
+  FIELDS.forEach(f => {
+    const grp = gbf(recs.filter(r => r[f.k]), f.k);
+    Object.entries(grp).forEach(([val, items]) => {
+      if (items.length < 2) return;
+      const safeRate = pct(items.filter(r => !r.isIsl).length, items.length);
+      const safeItems = items.filter(r => !r.isIsl && r.wait !== null && !isNaN(r.wait));
+      const avgW = safeItems.length ? safeItems.reduce((s,r) => s+r.wait, 0) / safeItems.length : 999;
+      // composite score: high safe rate + fast wait
+      const composite = safeRate * 0.6 + Math.max(0, 100 - avgW * 2) * 0.4;
+      scores.push({ field: f.l, val, safeRate, avgW: avgW.toFixed(1), n: items.length, safeN: safeItems.length, composite });
+    });
+  });
+
+  scores.sort((a, b) => b.composite - a.composite);
+  const top5 = scores.slice(0, 5);
+
+  if (!top5.length) { el.innerHTML = ''; return; }
+
+  const items = top5.map((p, i) => `
+  <div class="pat-item">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="pat-rank">#${i+1}</span>
+      <span style="font-size:12px;font-weight:700;color:var(--g2)">${p.field}</span>
+      <span style="font-size:11px;color:var(--sub2)">「${p.val}」</span>
+      <span class="bd b-safe" style="margin-left:auto">安全率${p.safeRate}%</span>
+    </div>
+    <div class="pat-tags">
+      <span class="pat-tag">📊 ${p.n}件のデータ</span>
+      <span class="pat-tag">⏱ 平均${p.avgW}h</span>
+      <span class="pat-tag">✅ ${p.safeRate}% 安全</span>
+    </div>
+    <div class="pat-stat">この条件での注文は島流し回避率が高く、ごちゅありも比較的速い傾向があります。</div>
+  </div>`).join('');
+
+  el.innerHTML = `<div class="card"><div class="card-title">⑧ 🏆 勝ちパターン自動抽出 TOP5</div>${items}</div>`;
+}
+
+// ============================================================
+// ⑨ アカウント別タイムライン
+// ============================================================
+function renderAccountTimeline() {
+  const el = document.getElementById('ana-timeline');
+  if (!el) return;
+
+  // Group by email (fall back to acctNum)
+  const keyed = {};
+  recs.forEach(r => {
+    const key = r.email || r.acctNum || '(不明)';
+    if (!keyed[key]) keyed[key] = [];
+    keyed[key].push(r);
+  });
+
+  if (Object.keys(keyed).length < 1) { el.innerHTML = ''; return; }
+
+  // Sort accounts by most recent order
+  const sorted = Object.entries(keyed)
+    .sort(([,a],[,b]) => new Date(b[0].date) - new Date(a[0].date))
+    .slice(0, 8); // max 8 accounts
+
+  const acctBlocks = sorted.map(([key, orders]) => {
+    const byDate = [...orders].sort((a,b) => new Date(a.date) - new Date(b.date));
+    const safeN = orders.filter(r => !r.isIsl).length;
+    const islN = orders.filter(r => r.isIsl).length;
+    const safeRate = pct(safeN, orders.length);
+
+    const items = byDate.slice(-10).map(r => {
+      const isPend = r.pending || r.wait === null || isNaN(r.wait);
+      const cls = isPend ? 'tl-pend' : r.isIsl ? 'tl-isl' : 'tl-safe';
+      const icon = isPend ? '⏳' : r.isIsl ? '🏝' : '✅';
+      const waitStr = isPend ? '待ち中' : r.wait + 'h';
+      const model = r.model ? r.model.replace('/ ','').slice(0,20) : '';
+      return `<div class="tl-item ${cls}">
+        <div class="tl-date">${r.date}<br><small>${r.orderTime||''}</small></div>
+        <div class="tl-body">${icon} ${r.qty>1?'×'+r.qty+'台 ':''}${model||''}${r.isIsl?' 🏝'+r.delay+'日延':' '+waitStr}${r.concurrent?' 同時'+r.concurrent+'件':''}</div>
+      </div>`;
+    }).join('');
+
+    const displayKey = key.length > 30 ? key.slice(0,27)+'...' : key;
+    return `<div class="tl-acct">
+      <div class="tl-head">
+        <span>📧 ${displayKey}</span>
+        <span style="font-size:10px;color:var(--sub)">${orders.length}件 / 安全率${safeRate}%</span>
+      </div>
+      ${items}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="card"><div class="card-title">⑨ 👤 アカウント別タイムライン</div>${acctBlocks}</div>`;
+}
+
+// ============================================================
+// ⑦ JSONインポート
+// ============================================================
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const incoming = parsed.records || parsed; // support both formats
+      if (!Array.isArray(incoming)) throw new Error('recordsが配列ではありません');
+
+      const existingIds = new Set(recs.map(r => r.id));
+      let added = 0, skipped = 0;
+      incoming.forEach(r => {
+        if (!r.id || existingIds.has(r.id)) { skipped++; return; }
+        recs.push(r);
+        existingIds.add(r.id);
+        added++;
+      });
+
+      // sort by date desc
+      recs.sort((a, b) => new Date(b.date) - new Date(a.date));
+      persist();
+      updateHeader();
+
+      const resEl = document.getElementById('import-result');
+      if (resEl) resEl.innerHTML = `✅ <b>${added}件</b> 追加、<b>${skipped}件</b> スキップ（重複または無効）`;
+      flash('import-msg');
+      input.value = '';
+    } catch(err) {
+      alert('インポートエラー: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
 }
 
 // ============================================================
