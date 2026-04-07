@@ -2116,9 +2116,11 @@ function renderLog(){
         : isPending
           ? '<span class="bd b-wait">⏳ ごちゅあり待ち</span>'
           : '<span class="bd b-safe">✅ 安全</span>';
-      const waitDisp=isPending
-        ? `<span style="font-size:13px;color:var(--o2);font-weight:700">ごちゅあり待ち中...</span>`
-        : `<span class="lmain">${r.wait}</span><span class="su">時間</span> ${speedBadge(r.wait)}`;
+      const waitDisp=r.isIsl
+        ? `<span style="font-size:13px;color:var(--r2);font-weight:700">🏝 島流し</span>`
+        : isPending
+          ? `<span style="font-size:13px;color:var(--o2);font-weight:700">ごちゅあり待ち中...</span>`
+          : `<span class="lmain">${r.wait}</span><span class="su">時間</span> ${speedBadge(r.wait)}`;
       return `
     <div class="li ${liClass}">
       <div class="lt">
