@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ごちゅあり＆島流し解析 v4</title>
+<title>ごちゅあり＆島流し解析 v6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -260,6 +260,22 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 .pat-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .pat-tag{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;background:rgba(16,185,129,.15);color:var(--g2)}
 .pat-stat{font-size:10px;color:var(--sub2);margin-top:5px;line-height:1.6}
+
+/* ── 識別3要素 USAGE STATS ── */
+.id3-card{border-color:rgba(59,130,246,.4);background:linear-gradient(135deg,rgba(59,130,246,.07),rgba(124,58,237,.04))}
+.id3-title{font-size:13px;font-weight:800;background:linear-gradient(90deg,#93c5fd,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+.usage-wrap{background:var(--card2);border-radius:9px;padding:7px 10px;margin-top:5px;min-height:28px}
+.usage-empty{font-size:10px;color:var(--sub);font-style:italic}
+.usage-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.us-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.us-count{background:rgba(124,58,237,.15);color:var(--a2)}
+.us-date{background:rgba(100,116,139,.12);color:var(--sub2)}
+.us-ok{background:rgba(16,185,129,.15);color:var(--g2)}
+.us-warn{background:rgba(245,158,11,.15);color:var(--o2)}
+.us-ng{background:rgba(239,68,68,.15);color:var(--r2)}
+.us-new{background:rgba(59,130,246,.12);color:var(--b2)}
+.cooldown-bar{height:4px;border-radius:2px;background:var(--card3);margin-top:6px;overflow:hidden}
+.cooldown-fill{height:4px;border-radius:2px;transition:width .5s,background .5s}
 </style>
 </head>
 <body>
@@ -269,7 +285,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
   <div class="hdr-row">
     <div>
       <div class="hdr-title">📨 ごちゅあり＆島流し解析</div>
-      <div class="hdr-sub" id="gs-sync-status">Apple注文アルゴリズム完全解明ツール v4</div>
+      <div class="hdr-sub">Apple注文アルゴリズム完全解明ツール v6</div>
     </div>
     <div class="hdr-badges">
       <div class="hdr-badge hb-total">
@@ -291,6 +307,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 <!-- TABS -->
 <div class="tabs">
   <button class="tab active" onclick="sw('record')">📝 記録</button>
+  <button class="tab" onclick="sw('bulk')">📦 一括入力</button>
   <button class="tab" onclick="sw('island')">🏝 島流し</button>
   <button class="tab" onclick="sw('analysis')">📊 分析</button>
   <button class="tab" onclick="sw('log')">📋 ログ</button>
@@ -300,6 +317,56 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 <!-- ===== RECORD TAB ===== -->
 <div id="tab-record" class="sec active">
   <div class="sec-title">新しい注文を記録</div>
+  <!-- 🔑 識別3要素カード -->
+  <div class="card id3-card">
+    <div class="id3-title">🔑 識別3要素（最重要）— 電話番号・カード・メールアドレス</div>
+
+    <div class="fr">
+      <label class="fl">📞 電話番号（下4桁）<span style="color:var(--blue);font-size:9px"> ── 使用回数・冷却状況を自動確認</span></label>
+      <input type="text" class="fi" id="r-phone" placeholder="例: 1234" maxlength="4" inputmode="numeric"
+        style="font-size:18px;font-weight:900;letter-spacing:3px"
+        oninput="onPhoneInput('r-phone','phone-stats-r')"
+        onfocus="onPhoneInput('r-phone','phone-stats-r')">
+      <div class="usage-wrap" id="phone-stats-r"><div class="usage-empty">電話番号を入力すると使用履歴が表示されます</div></div>
+    </div>
+
+    <div class="fr" style="margin-top:10px">
+      <label class="fl">💳 カード（下4桁）<span style="color:var(--blue);font-size:9px"> ── 使用回数・冷却状況を自動確認</span></label>
+      <input type="text" class="fi" id="r-card-top" placeholder="例: 5678" maxlength="4" inputmode="numeric"
+        style="font-size:18px;font-weight:900;letter-spacing:3px"
+        oninput="syncCardInput(this.value)" onfocus="onCardTopInput()">
+      <div class="usage-wrap" id="card-stats-r"><div class="usage-empty">カード番号を入力すると使用履歴が表示されます</div></div>
+    </div>
+
+    <div class="fr" style="margin-top:10px">
+      <label class="fl">📧 Apple IDメールアドレス<span style="color:var(--blue);font-size:9px"> ── 使用回数・冷却状況を自動確認</span></label>
+      <div class="email-wrap">
+        <input type="email" class="fi" id="r-email-top" placeholder="例: user@icloud.com" autocomplete="off"
+          oninput="syncEmailInput(this.value);showEmailSuggest('r-email-top','r-email-top-suggest')"
+          onfocus="syncEmailInput(this.value);showEmailSuggest('r-email-top','r-email-top-suggest')"
+          onblur="setTimeout(()=>hideEmailSuggest('r-email-top-suggest'),150)">
+        <div class="email-suggest" id="r-email-top-suggest"></div>
+      </div>
+      <div class="usage-wrap" id="email-stats-r"><div class="usage-empty">メールアドレスを入力すると使用履歴が表示されます</div></div>
+    </div>
+
+    <div class="fr" style="margin-top:10px">
+      <label class="fl">🕐 注文した時間帯<span style="color:var(--blue);font-size:9px"> ── 最重要3点に加え記録</span></label>
+      <div class="cg">
+        <div class="chip" data-g="timeband" data-v="深夜(0-5時)">深夜 0-5時</div>
+        <div class="chip" data-g="timeband" data-v="早朝(6-8時)">早朝 6-8時</div>
+        <div class="chip" data-g="timeband" data-v="午前(9-11時)">午前 9-11時</div>
+        <div class="chip" data-g="timeband" data-v="昼(12-13時)">昼 12-13時</div>
+        <div class="chip" data-g="timeband" data-v="午後(14-17時)">午後 14-17時</div>
+        <div class="chip" data-g="timeband" data-v="夕方(18-20時)">夕方 18-20時</div>
+        <div class="chip" data-g="timeband" data-v="夜(21-23時)">夜 21-23時</div>
+      </div>
+    </div>
+
+    <div style="font-size:9px;color:var(--sub);margin-top:10px;line-height:1.7;padding:6px 8px;background:rgba(59,130,246,.06);border-radius:7px">
+      🔵 冷却目安: <b>電話番号・カード</b>は最終使用から<span id="cfg-cooldown-disp" style="color:var(--b2);font-weight:700">30日</span>以上経過で🟢使用可能、14〜29日で🟡要注意、13日以内は🔴冷却中の可能性があります（⚙️設定で変更可）
+    </div>
+  </div>
 
   <!-- ① リアルタイム危険度スコア -->
   <div class="card risk-card" id="risk-meter-card">
@@ -405,8 +472,8 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
     <div class="fr" style="margin-top:8px"><label class="fl">使用したApple IDメールアドレス</label>
       <div class="email-wrap">
         <input type="email" class="fi" id="r-email" placeholder="例: user@icloud.com" autocomplete="off"
-          oninput="showEmailSuggest('r-email','r-email-suggest')"
-          onfocus="showEmailSuggest('r-email','r-email-suggest')"
+          oninput="showEmailSuggest('r-email','r-email-suggest');syncEmailFromMain(this.value)"
+          onfocus="showEmailSuggest('r-email','r-email-suggest');syncEmailFromMain(this.value)"
           onblur="setTimeout(()=>hideEmailSuggest('r-email-suggest'),150)">
         <div class="email-suggest" id="r-email-suggest"></div>
       </div>
@@ -416,24 +483,6 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
         <div class="chip" data-g="email-type" data-v="通常メアド">📧 通常メアド</div>
         <div class="chip" data-g="email-type" data-v="エイリアス使用">🎭 エイリアス使用</div>
         <div class="chip" data-g="email-type" data-v="Hide My Email">🙈 Hide My Email</div>
-      </div>
-    </div>
-    <div class="fr" style="margin-top:6px"><label class="fl">📞 電話番号</label>
-      <div class="email-wrap">
-        <input type="tel" class="fi" id="r-phone" placeholder="例: 090-1234-5678" autocomplete="off"
-          oninput="showPhoneSuggest('r-phone','r-phone-suggest')"
-          onfocus="showPhoneSuggest('r-phone','r-phone-suggest')"
-          onblur="setTimeout(()=>hidePhoneSuggest('r-phone-suggest'),150)">
-        <div class="email-suggest" id="r-phone-suggest"></div>
-      </div>
-    </div>
-    <div class="fr" style="margin-top:6px"><label class="fl">アカウント作成時期</label>
-      <div class="cg">
-        <div class="chip" data-g="acct-age" data-v="1ヶ月未満">1ヶ月未満</div>
-        <div class="chip" data-g="acct-age" data-v="1〜6ヶ月">1〜6ヶ月</div>
-        <div class="chip" data-g="acct-age" data-v="6ヶ月〜1年">6ヶ月〜1年</div>
-        <div class="chip" data-g="acct-age" data-v="1年以上">1年以上</div>
-        <div class="chip" data-g="acct-age" data-v="5年以上">5年以上</div>
       </div>
     </div>
     <div class="fr" style="margin-top:10px"><label class="fl">ネットワーク</label>
@@ -476,6 +525,14 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
         <div class="chip" data-g="delivery" data-v="宅配ボックス">📫 宅配Box</div>
         <div class="chip" data-g="delivery" data-v="コンビニ受取">🏢 コンビニ</div>
         <div class="chip" data-g="delivery" data-v="ヤマト運輸営業所">🚚 ヤマト営業所</div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:10px"><label class="fl">③ 配送先住所の新規度 <span style="color:var(--accent);font-size:9px">── 住所の使用履歴</span></label>
+      <div class="cg">
+        <div class="chip" data-g="addr-novelty" data-v="初回使用">🏠 初回使用</div>
+        <div class="chip" data-g="addr-novelty" data-v="過去使用済み">♻️ 過去使用済み</div>
+        <div class="chip" data-g="addr-novelty" data-v="転送先住所">📦 転送先</div>
+        <div class="chip" data-g="addr-novelty" data-v="住所変更後">🔄 住所変更後</div>
       </div>
     </div>
     <div class="fr" style="margin-top:10px"><label class="fl">支払い方法</label>
@@ -523,7 +580,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
     </div>
     <div class="fg2" style="margin-top:10px">
       <div class="fr"><label class="fl">下4桁</label>
-        <input type="text" class="fi" id="r-cc-last4" placeholder="例: 1234" maxlength="4" inputmode="numeric" oninput="onCardInput()">
+        <input type="text" class="fi" id="r-cc-last4" placeholder="例: 1234" maxlength="4" inputmode="numeric" oninput="onCardInput();syncCardFromMain(this.value)">
       </div>
       <div class="fr"><label class="fl">このカードでの注文回数</label>
         <input type="number" class="fi" id="r-cc-usecount" placeholder="例: 3" min="1">
@@ -534,82 +591,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
     </div>
   </div>
 
-  <!-- 下取り・キャリア契約カード -->
-  <div class="card">
-    <div class="card-title">📱 下取り・キャリア回線契約</div>
-    <div class="fr"><label class="fl">端末下取り（Apple Trade In）</label>
-      <div class="cg">
-        <div class="chip" data-g="tradein" data-v="あり">✅ 下取りあり</div>
-        <div class="chip" data-g="tradein" data-v="なし">❌ 下取りなし</div>
-      </div>
-    </div>
-    <div id="tradein-detail" style="display:none;margin-top:8px">
-      <div class="fr"><label class="fl">下取り端末</label>
-        <input type="text" class="fi" id="r-tradein-model" placeholder="例: iPhone 15 Pro">
-      </div>
-    </div>
-    <div class="fr" style="margin-top:10px"><label class="fl">キャリア回線契約</label>
-      <div class="cg">
-        <div class="chip" data-g="carrier-contract" data-v="あり">📡 回線契約あり</div>
-        <div class="chip" data-g="carrier-contract" data-v="なし">SIMフリー購入</div>
-      </div>
-    </div>
-    <div id="carrier-detail" style="display:none;margin-top:8px">
-      <div class="fr"><label class="fl">キャリア</label>
-        <div class="cg">
-          <div class="chip" data-g="carrier" data-v="docomo">🔴 docomo</div>
-          <div class="chip" data-g="carrier" data-v="au">🟠 au</div>
-          <div class="chip" data-g="carrier" data-v="SoftBank">🟢 SoftBank</div>
-          <div class="chip" data-g="carrier" data-v="楽天Mobile">⚫ 楽天</div>
-          <div class="chip" data-g="carrier" data-v="その他">その他</div>
-        </div>
-      </div>
-      <div class="fr" style="margin-top:8px"><label class="fl">契約種別</label>
-        <div class="cg">
-          <div class="chip" data-g="carrier-plan" data-v="新規契約">新規契約</div>
-          <div class="chip" data-g="carrier-plan" data-v="MNP">MNP</div>
-          <div class="chip" data-g="carrier-plan" data-v="機種変更">機種変更</div>
-          <div class="chip" data-g="carrier-plan" data-v="回線維持のみ">回線維持のみ</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">📊 注文タイミング</div>
-    <div class="fr"><label class="fl">曜日 <span style="color:var(--accent);font-size:9px">── 注文日から自動取得</span></label>
-      <div id="r-weekday-display" style="font-size:13px;color:var(--a2);font-weight:700;padding:4px 0">注文日を選択すると自動入力されます</div>
-      <input type="hidden" id="r-weekday">
-    </div>
-    <div class="fr" style="margin-top:10px"><label class="fl">同時に持っていた注文数（この注文除く）</label>
-      <div class="cg">
-        <div class="chip" data-g="concurrent" data-v="0">0件のみ</div>
-        <div class="chip" data-g="concurrent" data-v="1">1件</div>
-        <div class="chip" data-g="concurrent" data-v="2">2件</div>
-        <div class="chip" data-g="concurrent" data-v="3以上">3件以上</div>
-      </div>
-    </div>
-    <div class="fr" style="margin-top:10px"><label class="fl">同一シリーズでの注文回数（今回含む）</label>
-      <div class="cg">
-        <div class="chip" data-g="series-count" data-v="1回目">1回目</div>
-        <div class="chip" data-g="series-count" data-v="2回目">2回目</div>
-        <div class="chip" data-g="series-count" data-v="3回目">3回目</div>
-        <div class="chip" data-g="series-count" data-v="4回目以上">4回目以上</div>
-      </div>
-    </div>
-    <div class="fr" style="margin-top:10px"><label class="fl">注文した時間帯</label>
-      <div class="cg">
-        <div class="chip" data-g="timeband" data-v="深夜(0-5時)">深夜 0-5時</div>
-        <div class="chip" data-g="timeband" data-v="早朝(6-8時)">早朝 6-8時</div>
-        <div class="chip" data-g="timeband" data-v="午前(9-11時)">午前 9-11時</div>
-        <div class="chip" data-g="timeband" data-v="昼(12-13時)">昼 12-13時</div>
-        <div class="chip" data-g="timeband" data-v="午後(14-17時)">午後 14-17時</div>
-        <div class="chip" data-g="timeband" data-v="夕方(18-20時)">夕方 18-20時</div>
-        <div class="chip" data-g="timeband" data-v="夜(21-23時)">夜 21-23時</div>
-      </div>
-    </div>
-  </div>
-
+  <input type="hidden" id="r-weekday">
   <!-- アカウント信頼性カード -->
   <div class="card">
     <div class="card-title">🛡 アカウント信頼性</div>
@@ -620,6 +602,15 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
         <div class="chip" data-g="return-hist" data-v="2〜3回あり">2〜3回あり</div>
         <div class="chip" data-g="return-hist" data-v="4回以上あり">4回以上あり</div>
         <div class="chip" data-g="return-hist" data-v="不明">不明</div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:10px"><label class="fl">返品・キャンセルの理由（あれば）</label>
+      <div class="cg">
+        <div class="chip" data-g="return-reason" data-v="転売目的キャンセル疑い">⚠️ 転売疑い</div>
+        <div class="chip" data-g="return-reason" data-v="正規の返品">✅ 正規の返品</div>
+        <div class="chip" data-g="return-reason" data-v="島流しキャンセル">🏝 島流しキャン</div>
+        <div class="chip" data-g="return-reason" data-v="その他">その他</div>
+        <div class="chip" data-g="return-reason" data-v="該当なし">— 該当なし</div>
       </div>
     </div>
   </div>
@@ -658,7 +649,13 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
           <div class="chip" data-g="isl-reason" data-v="自己判断" data-multi="1">👤 自己判断</div>
         </div>
       </div>
-      <div class="fr"><label class="fl">到着日のずれ（日数）</label><input type="number" class="fi" id="r-delay" placeholder="例: 7" min="0"></div>
+      <div class="fg2" style="margin-top:8px">
+        <div class="fr"><label class="fl">到着日のずれ（日数）</label><input type="number" class="fi" id="r-delay" placeholder="例: 7" min="0"></div>
+        <div class="fr"><label class="fl">到着日が延びた回数</label><input type="number" class="fi" id="r-ext" placeholder="例: 3" min="0"></div>
+      </div>
+      <div class="fr"><label class="fl">ご注文変更メールが来るまでの時間（時間）</label>
+        <input type="number" class="fi" id="r-chgmail-h" placeholder="例: 48（2日後なら48）" min="0">
+      </div>
       <div class="fr"><label class="fl">最終的な結末</label>
         <div class="cg">
           <div class="chip" data-g="isl-end" data-v="無事届いた">📦 届いた</div>
@@ -689,6 +686,275 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
   <div class="save-msg" id="save-msg">✅ 保存しました！</div>
 </div>
 
+<!-- ===== BULK TAB ===== -->
+<div id="tab-bulk" class="sec">
+  <div class="sec-title">📦 過去データ一括入力</div>
+  <div class="info">過去の注文・島流し経験をまとめて記録できます。1件ずつ追加していきます。</div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div class="card-title">クイック入力テンプレート</div>
+
+    <!-- 基本情報 -->
+    <div class="fg2">
+      <div class="fr"><label class="fl">注文日</label><input type="date" class="fi" id="b-date"></div>
+      <div class="fr"><label class="fl">台数</label>
+        <select class="fi" id="b-qty">
+          <option value="1">1台</option>
+          <option value="2">2台</option>
+          <option value="3">3台</option>
+          <option value="4">4台</option>
+          <option value="5">5台</option>
+          <option value="6">6台</option>
+          <option value="7">7台</option>
+          <option value="8">8台</option>
+          <option value="9">9台</option>
+          <option value="10">10台</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr"><label class="fl">モデル</label>
+      <select class="fi" id="b-model">
+        <option value="">── 選択 ──</option>
+        <optgroup label="iPhone 17 Pro 256GB">
+          <option value="17 Pro / シルバー / 256GB">🩶 17 Pro ・シルバー・256GB</option>
+          <option value="17 Pro / コズミックオレンジ / 256GB">🧡 17 Pro ・コズミックオレンジ・256GB</option>
+          <option value="17 Pro / ディープブルー / 256GB">💙 17 Pro ・ディープブルー・256GB</option>
+        </optgroup>
+        <optgroup label="iPhone 17 Pro Max 256GB">
+          <option value="17 Pro Max / シルバー / 256GB">🩶 17 Pro Max・シルバー・256GB</option>
+          <option value="17 Pro Max / コズミックオレンジ / 256GB">🧡 17 Pro Max・コズミックオレンジ・256GB</option>
+          <option value="17 Pro Max / ディープブルー / 256GB">💙 17 Pro Max・ディープブルー・256GB</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <!-- ごちゅあり到着時間（時間単位） -->
+    <div class="fr"><label class="fl">ごちゅあり到着まで（時間）</label>
+      <div style="display:flex;align-items:center;gap:6px">
+        <input type="number" class="fi" id="b-wait" placeholder="例: 12.5" min="0" step="0.1" style="flex:1">
+        <span style="font-size:12px;color:var(--sub);white-space:nowrap">時間</span>
+      </div>
+    </div>
+
+    <!-- アカウント -->
+    <!-- 電話番号 -->
+    <div class="fr"><label class="fl">📞 電話番号（下4桁）</label>
+      <input type="text" class="fi" id="b-phone" placeholder="例: 1234" maxlength="4" inputmode="numeric"
+        style="font-size:16px;font-weight:700;letter-spacing:2px"
+        oninput="onPhoneInput('b-phone','phone-stats-b')" onfocus="onPhoneInput('b-phone','phone-stats-b')">
+      <div class="usage-wrap" id="phone-stats-b" style="margin-top:4px"><div class="usage-empty">入力で履歴表示</div></div>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">🕐 注文した時間帯</label>
+      <div class="cg">
+        <div class="chip" data-bg="timeband" data-v="深夜(0-5時)">深夜 0-5時</div>
+        <div class="chip" data-bg="timeband" data-v="早朝(6-8時)">早朝 6-8時</div>
+        <div class="chip" data-bg="timeband" data-v="午前(9-11時)">午前 9-11時</div>
+        <div class="chip" data-bg="timeband" data-v="昼(12-13時)">昼 12-13時</div>
+        <div class="chip" data-bg="timeband" data-v="午後(14-17時)">午後 14-17時</div>
+        <div class="chip" data-bg="timeband" data-v="夕方(18-20時)">夕方 18-20時</div>
+        <div class="chip" data-bg="timeband" data-v="夜(21-23時)">夜 21-23時</div>
+      </div>
+    </div>
+    <div class="fr"><label class="fl">アカウント状態</label>
+      <div class="cg">
+        <div class="chip" data-bg="account" data-v="新規">🆕 新規</div>
+        <div class="chip" data-bg="account" data-v="既存">👤 既存</div>
+        <div class="chip" data-bg="account" data-v="Family共有">👨‍👩‍👧 Family共有</div>
+        <div class="chip" data-bg="account" data-v="ゲスト">🔓 ゲスト</div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">アカウント種類</label>
+      <div class="cg">
+        <div class="chip" data-bg="acct-role" data-v="メインアカウント">⭐ メイン</div>
+        <div class="chip" data-bg="acct-role" data-v="サブアカウント">2️⃣ サブ</div>
+        <div class="chip" data-bg="acct-role" data-v="家族のアカウント">👨‍👩‍👧 家族</div>
+        <div class="chip" data-bg="acct-role" data-v="友人のアカウント">🤝 友人</div>
+        <div class="chip" data-bg="acct-role" data-v="新規作成アカウント">🆕 新規作成</div>
+        <div class="chip" data-bg="acct-role" data-v="捨てアカウント">🗑 捨てアカ</div>
+      </div>
+    </div>
+    <div class="fg2" style="margin-top:8px">
+      <div class="fr"><label class="fl">アカウント識別番号</label>
+        <input type="text" class="fi" id="b-acct-num" placeholder="例: アカ①">
+      </div>
+      <div class="fr"><label class="fl">過去iPhone購入歴</label>
+        <div class="cg" style="flex-direction:column;gap:4px">
+          <div class="chip" data-bg="acct-history" data-v="購入歴あり">✅ あり</div>
+          <div class="chip" data-bg="acct-history" data-v="購入歴なし">❌ なし</div>
+        </div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">使用したApple IDメールアドレス</label>
+      <div class="email-wrap">
+        <input type="email" class="fi" id="b-email" placeholder="例: user@icloud.com" autocomplete="off"
+          oninput="showEmailSuggest('b-email','b-email-suggest')"
+          onfocus="showEmailSuggest('b-email','b-email-suggest')"
+          onblur="setTimeout(()=>hideEmailSuggest('b-email-suggest'),150)">
+        <div class="email-suggest" id="b-email-suggest"></div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:6px"><label class="fl">メールの種類</label>
+      <div class="cg">
+        <div class="chip" data-bg="email-type" data-v="通常メアド">📧 通常メアド</div>
+        <div class="chip" data-bg="email-type" data-v="エイリアス使用">🎭 エイリアス使用</div>
+        <div class="chip" data-bg="email-type" data-v="Hide My Email">🙈 Hide My Email</div>
+      </div>
+    </div>
+
+    <!-- ネットワーク・注文方法 -->
+    <div class="fr" style="margin-top:8px"><label class="fl">ネットワーク</label>
+      <div class="cg">
+        <div class="chip" data-bg="net" data-v="Wi-Fi">📶 Wi-Fi</div>
+        <div class="chip" data-bg="net" data-v="4G">📡 4G</div>
+        <div class="chip" data-bg="net" data-v="5G">🚀 5G</div>
+        <div class="chip" data-bg="net" data-v="VPN使用">🔒 VPN</div>
+        <div class="chip" data-bg="net" data-v="VPN+Wi-Fi">🔒📶 VPN+Wi-Fi</div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">注文した端末</label>
+      <div class="cg">
+        <div class="chip" data-bg="device" data-v="iPhone">📱 iPhone</div>
+        <div class="chip" data-bg="device" data-v="Android">🤖 Android</div>
+        <div class="chip" data-bg="device" data-v="iPad">📲 iPad</div>
+        <div class="chip" data-bg="device" data-v="Mac">💻 Mac</div>
+        <div class="chip" data-bg="device" data-v="Windows PC">🖥 Windows PC</div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">使用したブラウザ／アプリ</label>
+      <div class="cg">
+        <div class="chip" data-bg="browser" data-v="Apple Storeアプリ">🍎 Apple Storeアプリ</div>
+        <div class="chip" data-bg="browser" data-v="Safari">🧭 Safari</div>
+        <div class="chip" data-bg="browser" data-v="Chrome">🌍 Chrome</div>
+        <div class="chip" data-bg="browser" data-v="Brave">🦁 Brave</div>
+        <div class="chip" data-bg="browser" data-v="Firefox">🦊 Firefox</div>
+        <div class="chip" data-bg="browser" data-v="Edge">🔷 Edge</div>
+        <div class="chip" data-bg="browser" data-v="その他">その他</div>
+      </div>
+    </div>
+
+    <!-- 注文条件 -->
+    <div class="fr" style="margin-top:8px"><label class="fl">受け取り方法</label>
+      <div class="cg">
+        <div class="chip" data-bg="delivery" data-v="自宅配送">🏠 自宅配送</div>
+        <div class="chip" data-bg="delivery" data-v="Apple Store受取">🏪 Store受取</div>
+        <div class="chip" data-bg="delivery" data-v="宅配ボックス">📫 宅配Box</div>
+        <div class="chip" data-bg="delivery" data-v="コンビニ受取">🏢 コンビニ</div>
+        <div class="chip" data-bg="delivery" data-v="ヤマト運輸営業所">🚚 ヤマト営業所</div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">支払い方法</label>
+      <div class="cg">
+        <div class="chip" data-bg="payment" data-v="Apple Pay">💳 Apple Pay</div>
+        <div class="chip" data-bg="payment" data-v="クレカ">💳 クレカ</div>
+        <div class="chip" data-bg="payment" data-v="Apple Card">🍎 Apple Card</div>
+        <div class="chip" data-bg="payment" data-v="デビットカード">🏦 デビット</div>
+        <div class="chip" data-bg="payment" data-v="分割払い">📅 分割</div>
+        <div class="chip" data-bg="payment" data-v="ギフトカード">🎁 ギフトカード</div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">同時注文数</label>
+      <div class="cg">
+        <div class="chip" data-bg="concurrent" data-v="0">0件のみ</div>
+        <div class="chip" data-bg="concurrent" data-v="1">1件</div>
+        <div class="chip" data-bg="concurrent" data-v="2">2件</div>
+        <div class="chip" data-bg="concurrent" data-v="3以上">3以上</div>
+      </div>
+    </div>
+
+    <!-- クレカ詳細 -->
+    <div class="divider" style="margin:10px 0 8px"></div>
+    <div class="card-title" style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">💳 クレジット／デビットカード詳細</div>
+    <div class="fr">
+      <label class="fl">登録済みカードから選ぶ</label>
+      <select class="fi" id="b-cc-select" onchange="applyBulkSavedCard(this.value)">
+        <option value="">── 新規入力 ──</option>
+      </select>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">カードブランド</label>
+      <div class="cg">
+        <div class="chip" data-bg="cc-brand" data-v="Visa">🔵 Visa</div>
+        <div class="chip" data-bg="cc-brand" data-v="Mastercard">🔴 Mastercard</div>
+        <div class="chip" data-bg="cc-brand" data-v="JCB">🟢 JCB</div>
+        <div class="chip" data-bg="cc-brand" data-v="Amex">⬜ Amex</div>
+        <div class="chip" data-bg="cc-brand" data-v="Diners">🟤 Diners</div>
+      </div>
+    </div>
+    <div class="fr" style="margin-top:8px"><label class="fl">カード種類</label>
+      <div class="cg">
+        <div class="chip" data-bg="cc-type" data-v="クレジット">クレジット</div>
+        <div class="chip" data-bg="cc-type" data-v="デビット">デビット</div>
+        <div class="chip" data-bg="cc-type" data-v="プリペイド">プリペイド</div>
+        <div class="chip" data-bg="cc-type" data-v="法人カード">法人カード</div>
+      </div>
+    </div>
+    <div class="fg2" style="margin-top:8px">
+      <div class="fr"><label class="fl">下4桁</label>
+        <input type="text" class="fi" id="b-cc-last4" placeholder="例: 1234" maxlength="4" inputmode="numeric">
+      </div>
+      <div class="fr"><label class="fl">注文回数</label>
+        <input type="number" class="fi" id="b-cc-usecount" placeholder="例: 3" min="1">
+      </div>
+    </div>
+    <div class="fr" style="margin-top:4px"><label class="fl">カード発行銀行・会社（任意）</label>
+      <input type="text" class="fi" id="b-cc-issuer" placeholder="例: 三井住友・楽天・イオン">
+    </div>
+
+    <!-- アカウント信頼性 -->
+    <div class="divider" style="margin:10px 0 8px"></div>
+    <div class="card-title" style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🛡 アカウント信頼性</div>
+    <div class="fr"><label class="fl">過去の返品・キャンセル歴</label>
+      <div class="cg">
+        <div class="chip" data-bg="return-hist" data-v="なし">✅ なし</div>
+        <div class="chip" data-bg="return-hist" data-v="1回あり">1回あり</div>
+        <div class="chip" data-bg="return-hist" data-v="2〜3回あり">2〜3回あり</div>
+        <div class="chip" data-bg="return-hist" data-v="4回以上あり">4回以上あり</div>
+        <div class="chip" data-bg="return-hist" data-v="不明">不明</div>
+      </div>
+    </div>
+
+    <div class="divider" style="margin:10px 0 8px"></div>
+
+    <!-- 注文番号 -->
+    <div class="fr"><label class="fl">注文番号（下5桁）</label>
+      <input type="text" class="fi" id="b-order-no" placeholder="例: 12345" maxlength="5" inputmode="numeric" style="font-size:16px;font-weight:700;letter-spacing:2px">
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 島流し -->
+    <div class="tog-row" style="margin-bottom:8px">
+      <div class="tog-lbl">🏝 島流しになった</div>
+      <label class="sw"><input type="checkbox" id="b-isl" onchange="toggleBulkIsl()"><span class="sw-sl"></span></label>
+    </div>
+    <div id="b-isl-fields" style="display:none">
+      <div class="fg2">
+        <div class="fr"><label class="fl">遅延日数</label><input type="number" class="fi" id="b-delay" placeholder="例: 7" min="0"></div>
+        <div class="fr"><label class="fl">延長回数</label><input type="number" class="fi" id="b-ext" placeholder="例: 3" min="0"></div>
+      </div>
+      <div class="fr"><label class="fl">ご注文変更メール</label>
+        <div class="cg">
+          <div class="chip" data-bg="chgmail" data-v="あり">あり</div>
+          <div class="chip" data-bg="chgmail" data-v="なし">なし</div>
+        </div>
+      </div>
+      <div class="fr" style="margin-top:6px"><label class="fl">結末</label>
+        <div class="cg">
+          <div class="chip" data-bg="isl-end" data-v="無事届いた">届いた</div>
+          <div class="chip" data-bg="isl-end" data-v="自分でキャンセル">自キャン</div>
+          <div class="chip" data-bg="isl-end" data-v="Appleキャンセル">Appleキャン</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fr" style="margin-top:8px"><label class="fl">メモ（任意）</label>
+      <input type="text" class="fi" id="b-memo" placeholder="例: 発売日当日">
+    </div>
+    <button class="btn btn-p" style="margin-top:8px" onclick="saveBulk()">➕ この1件を追加</button>
+    <div class="save-msg" id="bulk-msg">✅ 追加しました！</div>
+  </div>
+
+  <div id="bulk-preview" style="margin-top:4px"></div>
+</div>
 
 <!-- ===== ISLAND TAB ===== -->
 <div id="tab-island" class="sec">
@@ -711,8 +977,9 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
   <!-- AI結果エリア -->
   <div id="ai-result" style="display:none;margin-bottom:14px"></div>
 
-  <!-- 📞 電話番号別使用状況 -->
-  <div id="ana-phone-stats" style="margin-bottom:14px"></div>
+
+  <!-- 🔑 識別3要素 冷却状況サマリー -->
+  <div id="ana-identity" style="margin-bottom:14px"></div>
 
   <!-- ② ごちゅあり到着時間 ヒストグラム -->
   <div id="ana-histogram" style="margin-bottom:14px"></div>
@@ -741,30 +1008,6 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 <!-- ===== SETTINGS TAB ===== -->
 <div id="tab-settings" class="sec">
   <div class="sec-title">⚙️ 設定</div>
-
-  <!-- ☁️ Google Sheets 連携 -->
-  <div class="card" style="border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.02)">
-    <div class="card-title" style="color:var(--g2)">☁️ Googleスプレッドシート連携</div>
-    <div style="font-size:11px;color:var(--sub2);margin-bottom:10px;line-height:1.75">
-      Apps Script ウェブアプリ URL を設定すると、スマホ・PC・タブレット<br>
-      どの端末からでもデータを閲覧・編集・追加できます。<br>
-      <span style="color:var(--a2)">▶ 設定方法は「セットアップ手順.md」を参照してください</span>
-    </div>
-    <div class="fr">
-      <label class="fl">Apps Script ウェブアプリ URL</label>
-      <input type="url" class="fi" id="cfg-gs-url"
-        placeholder="https://script.google.com/macros/s/.../exec"
-        style="font-size:11px;word-break:break-all">
-    </div>
-    <div style="display:flex;gap:7px;margin-top:9px">
-      <button class="btn btn-p" style="font-size:13px;padding:10px;flex:1" onclick="saveGsUrl()">💾 URLを保存</button>
-      <button onclick="testGsConnection()" style="flex:0;padding:10px 13px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.4);color:var(--b2);border-radius:12px;font-size:12px;font-weight:700;cursor:pointer">🔌 接続テスト</button>
-      <button onclick="syncNow()" style="flex:0;padding:10px 13px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4);color:var(--g2);border-radius:12px;font-size:12px;font-weight:700;cursor:pointer">🔄 今すぐ同期</button>
-    </div>
-    <div class="save-msg" id="gs-url-msg" style="color:var(--g2)">✅ URLを保存しました</div>
-    <div id="gs-sync-detail" style="font-size:10px;color:var(--sub2);margin-top:7px;line-height:1.9"></div>
-  </div>
-
   <div class="card">
     <div class="card-title">🏝 島流し判定しきい値</div>
     <div class="set-row">
@@ -774,6 +1017,10 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
     <div class="set-row">
       <div><div class="set-lbl">処理中ステータス警戒</div><div class="set-sub">X時間以上処理中なら島流し疑い</div></div>
       <input type="number" class="set-input" id="cfg-processing-h" value="24" min="1"> <span style="font-size:11px;color:var(--sub)">時間</span>
+    </div>
+    <div class="set-row">
+      <div><div class="set-lbl">🔑 識別子 冷却期間（日）</div><div class="set-sub">電話番号・カードの再使用可能目安日数</div></div>
+      <input type="number" class="set-input" id="cfg-cooldown-days" value="30" min="1"> <span style="font-size:11px;color:var(--sub)">日</span>
     </div>
     <button class="btn btn-p" style="margin-top:10px;font-size:13px;padding:10px" onclick="saveCfg()">設定を保存</button>
     <div class="save-msg" id="cfg-msg" style="color:var(--g2)">✅ 保存しました</div>
@@ -811,6 +1058,27 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
       <button class="modal-close" onclick="closeEditModal()">✕</button>
     </div>
 
+
+    <div class="edit-section">🔑 識別3要素</div>
+    <div class="fr"><label class="fl">📞 電話番号（下4桁）</label>
+      <input type="text" class="fi" id="e-phone" maxlength="4" inputmode="numeric" placeholder="例: 1234"
+        style="font-size:16px;font-weight:700;letter-spacing:2px"
+        oninput="onPhoneInput('e-phone','phone-stats-e')" onfocus="onPhoneInput('e-phone','phone-stats-e')">
+      <div class="usage-wrap" id="phone-stats-e" style="margin-top:4px"><div class="usage-empty">入力で履歴表示</div></div>
+    </div>
+
+    <div class="edit-section">🏠 住所・操作時間</div>
+    <div class="fg2">
+      <div class="fr"><label class="fl">配送先住所の新規度</label>
+        <select class="fi" id="e-addr-novelty">
+          <option value="">──</option>
+          <option>初回使用</option><option>過去使用済み</option><option>転送先住所</option><option>住所変更後</option>
+        </select>
+      </div>
+      <div class="fr"><label class="fl">カート→決済（秒）</label>
+        <input type="number" class="fi" id="e-cart-sec" min="0" step="1" placeholder="例: 45">
+      </div>
+    </div>
     <div class="edit-section">📅 基本情報</div>
     <div class="fg2">
       <div class="fr"><label class="fl">注文日</label><input type="date" class="fi" id="e-date"></div>
@@ -891,21 +1159,6 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
         <option>Hide My Email</option>
       </select>
     </div>
-    <div class="fr" style="margin-top:6px"><label class="fl">📞 電話番号</label>
-      <div class="email-wrap">
-        <input type="tel" class="fi" id="e-phone" placeholder="例: 090-1234-5678" autocomplete="off"
-          oninput="showPhoneSuggest('e-phone','e-phone-suggest')"
-          onfocus="showPhoneSuggest('e-phone','e-phone-suggest')"
-          onblur="setTimeout(()=>hidePhoneSuggest('e-phone-suggest'),150)">
-        <div class="email-suggest" id="e-phone-suggest"></div>
-      </div>
-    </div>
-    <div class="fr" style="margin-top:6px"><label class="fl">アカウント作成時期</label>
-      <select class="fi" id="e-acct-age">
-        <option value="">──</option>
-        <option>1ヶ月未満</option><option>1〜6ヶ月</option><option>6ヶ月〜1年</option><option>1年以上</option><option>5年以上</option>
-      </select>
-    </div>
     <div class="fr" style="margin-top:6px"><label class="fl">iPhone購入歴</label>
       <select class="fi" id="e-acct-history">
         <option value="">──</option><option>購入歴あり</option><option>購入歴なし</option>
@@ -967,31 +1220,6 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
         </select>
       </div>
     </div>
-    <div class="fg2" style="margin-top:6px">
-      <div class="fr"><label class="fl">同時注文数</label>
-        <select class="fi" id="e-concurrent">
-          <option value="">──</option><option>0</option><option>1</option><option>2</option><option>3以上</option>
-        </select>
-      </div>
-      <div class="fr"><label class="fl">キャリア回線</label>
-        <select class="fi" id="e-carrier-contract">
-          <option value="">──</option><option>あり</option><option>なし</option>
-        </select>
-      </div>
-    </div>
-    <div class="fg2" style="margin-top:6px">
-      <div class="fr"><label class="fl">キャリア</label>
-        <select class="fi" id="e-carrier">
-          <option value="">──</option><option>docomo</option><option>au</option><option>SoftBank</option><option>楽天Mobile</option><option>その他</option>
-        </select>
-      </div>
-      <div class="fr"><label class="fl">契約種別</label>
-        <select class="fi" id="e-carrier-plan">
-          <option value="">──</option><option>新規契約</option><option>MNP</option><option>機種変更</option><option>回線維持のみ</option>
-        </select>
-      </div>
-    </div>
-
     <div class="edit-section">💳 クレカ詳細</div>
     <div class="fg2">
       <div class="fr"><label class="fl">ブランド</label>
@@ -1011,18 +1239,6 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
     </div>
     <div class="fr" style="margin-top:6px"><label class="fl">発行会社</label>
       <input type="text" class="fi" id="e-cc-issuer" placeholder="例: 三井住友・楽天">
-    </div>
-
-    <div class="edit-section">📱 下取り</div>
-    <div class="fg2">
-      <div class="fr"><label class="fl">下取り有無</label>
-        <select class="fi" id="e-tradein">
-          <option value="">──</option><option>あり</option><option>なし</option>
-        </select>
-      </div>
-    </div>
-    <div class="fr" style="margin-top:6px"><label class="fl">下取り端末</label>
-      <input type="text" class="fi" id="e-tradein-model" placeholder="例: iPhone 15 Pro">
     </div>
 
     <div class="edit-section">🏝 島流し</div>
@@ -1056,7 +1272,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 // STATE
 // ============================================================
 let recs = [];
-let cfg = { mailMin:60, processingH:24, gsUrl:'' };
+let cfg = { mailMin:60, processingH:24 };
 const SEL = {};   // record tab
 const BSEL = {};  // bulk tab
 const MULTI = {}; // multi-select groups
@@ -1066,215 +1282,14 @@ function loadAll(){
   try{ const d=localStorage.getItem('gca_v3'); if(d) recs=JSON.parse(d); }catch(e){ recs=[]; }
   try{ const c=localStorage.getItem('gca_cfg'); if(c) cfg=Object.assign(cfg,JSON.parse(c)); }catch(e){}
 }
-function persist(){
-  localStorage.setItem('gca_v3',JSON.stringify(recs));
-  if(cfg.gsUrl) persistToGS(); // バックグラウンドでGS同期
-}
-function persistCfg(){
-  localStorage.setItem('gca_cfg',JSON.stringify(cfg));
-}
-
-// ============================================================
-// GOOGLE SHEETS 連携
-// ============================================================
-let _gsSyncing = false;
-let _gsLastSync = null;
-let _gsSyncOk = null; // true=成功 false=失敗 null=未実行
-
-// GS から全データを読み込み（async）
-async function loadFromGS(){
-  if(!cfg.gsUrl) return false;
-  try{
-    const url = cfg.gsUrl + (cfg.gsUrl.includes('?')?'&':'?') + 'action=load&_t=' + Date.now();
-    const res = await fetch(url, { cache:'no-cache', credentials:'omit', mode:'cors' });
-    const text = await res.text();
-    if(!res.ok) throw new Error('HTTP ' + res.status + ': ' + text.slice(0,200));
-    let data;
-    try{ data = JSON.parse(text); }
-    catch(e){ throw new Error('レスポンスがJSONではありません。URLを確認してください。\n' + text.slice(0,300)); }
-    if(!data.ok) throw new Error(data.error || '読み込みエラー');
-
-    // マージ: GS のデータを優先、ローカルのみのレコードは保持
-    const gsIds = new Set((data.recs||[]).map(r=>r.id));
-    const localOnly = recs.filter(r => !gsIds.has(r.id));
-    recs = [...(data.recs||[]), ...localOnly];
-    recs.sort((a,b)=>(b.id||0)-(a.id||0));
-
-    // cfg・カード・メアド・電話番号もGSから復元（存在する場合）
-    if(data.cfg)    cfg    = Object.assign(cfg, data.cfg);
-    if(data.cards)  localStorage.setItem('gca_cards',  JSON.stringify(data.cards));
-    if(data.emails) localStorage.setItem('gca_emails', JSON.stringify(data.emails));
-    if(data.phones) localStorage.setItem('gca_phones', JSON.stringify(data.phones));
-
-    localStorage.setItem('gca_v3', JSON.stringify(recs));
-    _gsLastSync = new Date();
-    _gsSyncOk   = true;
-    return true;
-  }catch(err){
-    console.warn('[GS] 読み込みエラー:', err);
-    _gsSyncOk = false;
-    _updateSyncBadge('error', err.message);
-    return false;
-  }
-}
-
-// GS へ全データを書き込み（async・バックグラウンド）
-async function persistToGS(){
-  if(!cfg.gsUrl || _gsSyncing) return;
-  _gsSyncing = true;
-  _updateSyncBadge('syncing');
-  try{
-    // mode:'no-cors' で file:// からのCORSエラーを回避
-    // (no-cors ではレスポンスが読めないが送信は確実に届く)
-    await fetch(cfg.gsUrl, {
-      method:      'POST',
-      body:        JSON.stringify({ action:'save_recs', recs }),
-      headers:     { 'Content-Type':'text/plain' },
-      mode:        'no-cors',
-      credentials: 'omit',
-    });
-    // no-cors では res が opaque のため ok/text() が使えない
-    // 例外なしで完了 = 送信成功とみなす
-    _gsLastSync = new Date();
-    _gsSyncOk   = true;
-    _updateSyncBadge('ok');
-  }catch(err){
-    console.warn('[GS] 書き込みエラー:', err);
-    _gsSyncOk = false;
-    _updateSyncBadge('error', err.message);
-  }finally{
-    _gsSyncing = false;
-  }
-}
-
-// カード・メアド・電話番号情報を GS に同期
-async function persistAuxToGS(){
-  if(!cfg.gsUrl) return;
-  try{
-    const cards  = JSON.parse(localStorage.getItem('gca_cards')||'[]');
-    const emails = JSON.parse(localStorage.getItem('gca_emails')||'[]');
-    const phones = JSON.parse(localStorage.getItem('gca_phones')||'[]');
-    const _fetchOpts = { method:'POST', headers:{'Content-Type':'text/plain'}, mode:'no-cors', credentials:'omit' };
-    await fetch(cfg.gsUrl,{..._fetchOpts, body:JSON.stringify({action:'save_cards', cards})});
-    await fetch(cfg.gsUrl,{..._fetchOpts, body:JSON.stringify({action:'save_emails',emails})});
-    await fetch(cfg.gsUrl,{..._fetchOpts, body:JSON.stringify({action:'save_phones', phones})});
-  }catch(err){ console.warn('[GS] 補助データ同期エラー:', err); }
-}
-
-// ヘッダーとステータスを更新
-function _updateSyncBadge(status, errMsg){
-  const hdr    = document.getElementById('gs-sync-status');
-  const detail = document.getElementById('gs-sync-detail');
-  if(!cfg.gsUrl){
-    if(hdr)    hdr.textContent='Apple注文アルゴリズム完全解明ツール v4';
-    if(detail) detail.innerHTML='';
-    return;
-  }
-  const timeStr = _gsLastSync
-    ? _gsLastSync.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})
-    : '';
-  if(status==='syncing'){
-    if(hdr) hdr.innerHTML='<span style="color:var(--o2)">↕️ スプレッドシートと同期中...</span>';
-  }else if(status==='ok'){
-    if(hdr) hdr.innerHTML=`<span style="color:var(--g2)">☁️ GS同期済 ${timeStr}</span>`;
-  }else if(status==='error'){
-    if(hdr) hdr.innerHTML='<span style="color:var(--r2)">⚠️ GS同期エラー（ローカル保存済）</span>';
-  }
-  if(detail){
-    const gsUrlShort = cfg.gsUrl.length>50 ? cfg.gsUrl.slice(0,50)+'...' : cfg.gsUrl;
-    let detailHtml = `接続先: <span style="color:var(--a2);word-break:break-all">${gsUrlShort}</span><br>`
-      + (timeStr?`最終同期: ${timeStr}`:'同期待ち');
-    if(status==='error' && errMsg){
-      const hint = errMsg.includes('Failed to fetch')
-        ? ' ※URLを再確認してください（再デプロイ後に新しいURLに変わる場合があります）'
-        : '';
-      detailHtml += `<br><span style="color:var(--r2)">エラー詳細: ${errMsg}${hint}</span>`;
-    }
-    detail.innerHTML = detailHtml;
-  }
-}
-
-// 手動同期（設定タブのボタン用）
-async function syncNow(){
-  if(!cfg.gsUrl){ alert('URLが設定されていません'); return; }
-  _updateSyncBadge('syncing');
-  const ok = await loadFromGS();
-  if(ok){
-    updateHeader();
-    // 現在表示中のタブを再描画
-    const sec = document.querySelector('.sec.active');
-    if(sec){
-      const n = sec.id.replace('tab-','');
-      if(n==='log')      renderLog();
-      else if(n==='island')   renderIsland();
-      else if(n==='analysis') { renderAnalysis(); }
-    }
-  }
-  await persistToGS();
-  await persistAuxToGS();
-}
-
-// GS URL を保存する
-function saveGsUrl(){
-  const url = (document.getElementById('cfg-gs-url').value||'').trim();
-  if(url){
-    // URLの形式チェック
-    if(!url.includes('script.google.com/macros/s/')){
-      alert('URLの形式が正しくありません。\nApps Scriptのデプロイ画面から「ウェブアプリ URL」をコピーしてください。\n（例: https://script.google.com/macros/s/AKfy.../exec）');
-      return;
-    }
-    if(!url.endsWith('/exec')){
-      alert('URLが /exec で終わっていません。\nデプロイ画面からコピーした URL をそのまま貼り付けてください。');
-      return;
-    }
-  }
-  cfg.gsUrl = url;
-  persistCfg();
-  flash('gs-url-msg');
-  renderCfgDisplay();
-  if(url) syncNow();
-  else    _updateSyncBadge('none');
-}
-
-// 接続テスト（ping）
-async function testGsConnection(){
-  const url = (document.getElementById('cfg-gs-url').value||cfg.gsUrl||'').trim();
-  if(!url){ alert('URLを入力してください'); return; }
-  const detail = document.getElementById('gs-sync-detail');
-  if(detail) detail.innerHTML='<span style="color:var(--o2)">🔌 接続テスト中...</span>';
-  try{
-    const testUrl = url + (url.includes('?')?'&':'?') + 'action=ping&_t=' + Date.now();
-    const res = await fetch(testUrl, { cache:'no-cache', credentials:'omit', mode:'cors' });
-    const text = await res.text();
-    let data;
-    try{ data = JSON.parse(text); }
-    catch(e){ throw new Error('JSONではない応答。URLまたはデプロイ設定を確認。\n' + text.slice(0,200)); }
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    if(data.ok && data.pong){
-      if(detail) detail.innerHTML='<span style="color:var(--g2)">✅ 接続成功！スクリプトが正常に動作しています。</span>';
-    } else {
-      throw new Error(data.error || 'ping に失敗しました');
-    }
-  }catch(err){
-    if(detail) detail.innerHTML=`<span style="color:var(--r2)">❌ 接続失敗: ${err.message}</span>`;
-    console.warn('[GS] ping失敗:', err);
-  }
-}
+function persist(){ localStorage.setItem('gca_v3',JSON.stringify(recs)); }
+function persistCfg(){ localStorage.setItem('gca_cfg',JSON.stringify(cfg)); }
 
 loadAll();
 initDate();
 updateHeader();
 renderIslandGuide();
 renderCfgDisplay();
-
-// GS 連携が設定されていれば起動時に非同期ロード
-if(cfg.gsUrl){
-  _updateSyncBadge('syncing');
-  loadFromGS().then(ok=>{
-    if(ok){ updateHeader(); renderLog(); }
-    _updateSyncBadge(ok ? 'ok' : 'error');
-  });
-}
 
 // ============================================================
 // INIT
@@ -1415,6 +1430,23 @@ function applySavedCard(idx){
     if(t){ t.classList.add('on'); SEL['cc-type']=c.type; }
   }
 }
+function applyBulkSavedCard(idx){
+  if(idx==='') return;
+  const c=getSavedCards()[parseInt(idx)];
+  if(!c) return;
+  const l4=document.getElementById('b-cc-last4'); if(l4) l4.value=c.last4||'';
+  const is=document.getElementById('b-cc-issuer'); if(is) is.value=c.issuer||'';
+  if(c.brand){
+    document.querySelectorAll('.chip[data-bg="cc-brand"]').forEach(x=>x.classList.remove('on'));
+    const t=document.querySelector(`.chip[data-bg="cc-brand"][data-v="${c.brand}"]`);
+    if(t){ t.classList.add('on'); BSEL['cc-brand']=c.brand; }
+  }
+  if(c.type){
+    document.querySelectorAll('.chip[data-bg="cc-type"]').forEach(x=>x.classList.remove('on'));
+    const t=document.querySelector(`.chip[data-bg="cc-type"][data-v="${c.type}"]`);
+    if(t){ t.classList.add('on'); BSEL['cc-type']=c.type; }
+  }
+}
 function onCardInput(){ /* 入力監視 — saveRec時に保存 */ }
 function persistCard(brand,type,last4,issuer){
   if(!last4) return;
@@ -1477,58 +1509,6 @@ function deleteEmailAndRefresh(email, inputId, suggestId){
   deleteEmail(email);
   showEmailSuggest(inputId, suggestId);
 }
-
-// ============================================================
-// SAVED PHONES（電話番号サジェスト管理）
-// ============================================================
-function getSavedPhones(){
-  try{ const d=localStorage.getItem('gca_phones'); return d?JSON.parse(d):[]; }catch(e){ return []; }
-}
-function saveSavedPhones(arr){
-  localStorage.setItem('gca_phones',JSON.stringify(arr));
-}
-function persistPhone(phone){
-  if(!phone||phone.length<7) return;
-  const arr=getSavedPhones();
-  const idx=arr.indexOf(phone);
-  if(idx>-1) arr.splice(idx,1);
-  arr.unshift(phone);
-  if(arr.length>30) arr.pop();
-  saveSavedPhones(arr);
-}
-function deletePhone(phone){
-  const arr=getSavedPhones().filter(e=>e!==phone);
-  saveSavedPhones(arr);
-}
-function showPhoneSuggest(inputId, suggestId){
-  const input=document.getElementById(inputId);
-  const box=document.getElementById(suggestId);
-  if(!input||!box) return;
-  const q=input.value.replace(/[-\s]/g,'');
-  const all=getSavedPhones();
-  const filtered=q ? all.filter(p=>p.replace(/[-\s]/g,'').includes(q)) : all;
-  if(!filtered.length){ box.classList.remove('show'); return; }
-  box.innerHTML=filtered.map(p=>`
-    <div class="email-suggest-item" onmousedown="selectPhone('${inputId}','${suggestId}','${p}')">
-      <span>📞 ${p}</span>
-      <button class="email-suggest-del" onmousedown="event.stopPropagation();deletePhoneAndRefresh('${p}','${inputId}','${suggestId}')">✕</button>
-    </div>`).join('');
-  box.classList.add('show');
-}
-function hidePhoneSuggest(suggestId){
-  const box=document.getElementById(suggestId);
-  if(box) box.classList.remove('show');
-}
-function selectPhone(inputId, suggestId, phone){
-  const input=document.getElementById(inputId);
-  if(input) input.value=phone;
-  hidePhoneSuggest(suggestId);
-}
-function deletePhoneAndRefresh(phone, inputId, suggestId){
-  deletePhone(phone);
-  showPhoneSuggest(inputId, suggestId);
-}
-
 refreshCardSelect();
 // 既存レコードからカード情報を自動収集（初回のみ）
 if(!localStorage.getItem('gca_cards')){
@@ -1543,6 +1523,10 @@ if(!localStorage.getItem('gca_cards')){
 function toggleIslField(){
   document.getElementById('isl-fields').style.display=
     document.getElementById('r-isl').checked?'block':'none';
+}
+function toggleBulkIsl(){
+  document.getElementById('b-isl-fields').style.display=
+    document.getElementById('b-isl').checked?'block':'none';
 }
 
 // ============================================================
@@ -1579,6 +1563,7 @@ function saveRec(){
     storage:SEL.storage||'',
     // アカウント信頼性
     returnHist:SEL['return-hist']||'',
+    returnReason:SEL['return-reason']||'',
     // クレカ詳細
     ccBrand:SEL['cc-brand']||'', ccType:SEL['cc-type']||'',
     ccLast4:document.getElementById('r-cc-last4').value,
@@ -1587,6 +1572,8 @@ function saveRec(){
     // 下取り・キャリア
     tradein:SEL.tradein||'',
     tradeinModel:document.getElementById('r-tradein-model').value,
+    tradeinSerial:document.getElementById('r-tradein-serial').value,
+    serialUse:SEL['serial-use']||'',
     carrierContract:SEL['carrier-contract']||'',
     carrier:SEL.carrier||'',
     carrierPlan:SEL['carrier-plan']||'',
@@ -1595,28 +1582,32 @@ function saveRec(){
     isIsl,
     islReasons: MULTI['isl-reason'] ? [...MULTI['isl-reason']] : [],
     delay:isIsl?(parseInt(document.getElementById('r-delay').value)||0):0,
+    ext:isIsl?(parseInt(document.getElementById('r-ext').value)||0):0,
+    chgMailH:isIsl?(parseInt(document.getElementById('r-chgmail-h').value)||0):0,
     islEnd:isIsl?(SEL['isl-end']||''):'',
     workaround:isIsl?document.getElementById('r-workaround').value:'',
     islFix:isIsl?(SEL['isl-fix']||''):'',
     memo:document.getElementById('r-memo').value,
     orderNo:document.getElementById('r-order-no').value,
+    phone:(document.getElementById('r-phone')||{value:''}).value,
+    addrNovelty:SEL['addr-novelty']||'',
+    cartSec:parseInt((document.getElementById('r-cart-sec')||{value:0}).value)||0,
+    daysSinceLast:parseInt((document.getElementById('r-days-since')||{value:0}).value)||0,
     email:document.getElementById('r-email').value,
     emailType:SEL['email-type']||'',
-    phone:document.getElementById('r-phone').value,
     source:'record',
   };
 
   recs.unshift(rec); persist(); updateHeader();
 
-  // カード情報・メアド・電話番号を保存（GS にも非同期同期）
+  // カード情報・メアドを保存
   persistCard(rec.ccBrand, rec.ccType, rec.ccLast4, rec.ccIssuer);
   persistEmail(rec.email);
-  persistPhone(rec.phone);
-  if(cfg.gsUrl) persistAuxToGS();
 
   // reset
-  ['r-ot','r-mt','r-md','r-wait','r-memo','r-delay','r-workaround',
-   'r-cc-last4','r-cc-usecount','r-cc-issuer','r-tradein-model','r-acct-num','r-order-no','r-email','r-phone']
+  ['r-ot','r-mt','r-md','r-wait','r-memo','r-delay','r-ext','r-chgmail-h','r-workaround',
+   'r-cc-last4','r-cc-usecount','r-cc-issuer','r-tradein-model','r-tradein-serial','r-acct-num','r-order-no','r-email',
+   'r-cart-sec','r-days-since','r-phone','r-card-top','r-email-top']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const rm=document.getElementById('r-model'); if(rm) rm.value='';
   const rq=document.getElementById('r-qty'); if(rq) rq.value='1';
@@ -1636,6 +1627,104 @@ function saveRec(){
   flash('save-msg');
 }
 
+// ============================================================
+// SAVE BULK
+// ============================================================
+function saveBulk(){
+  try{
+  const date=document.getElementById('b-date').value;
+  const wait=parseFloat(document.getElementById('b-wait').value);
+  if(!date||isNaN(wait)){ alert('日付とごちゅあり到着時間（時間）は必須です'); return; }
+
+  const isIsl=document.getElementById('b-isl').checked;
+  const rec={
+    id:Date.now(), date, orderTime:'', mailTime:'', wait,
+    model:document.getElementById('b-model').value,
+    qty:parseInt(document.getElementById('b-qty').value)||1,
+    account:BSEL.account||'', acctRole:BSEL['acct-role']||'',
+    acctNum:document.getElementById('b-acct-num').value,
+    acctHistory:BSEL['acct-history']||'', acctAge:BSEL['acct-age']||'',
+    net:BSEL.net||'', device:BSEL.device||'', browser:BSEL.browser||'',
+    delivery:BSEL.delivery||'', payment:BSEL.payment||'',
+    concurrent:BSEL.concurrent||'', timeband:'', weekday:'',
+    stock:'', color:'', storage:'',
+    returnHist:BSEL['return-hist']||'', returnReason:'',
+    ccBrand:BSEL['cc-brand']||'', ccType:BSEL['cc-type']||'',
+    ccLast4:document.getElementById('b-cc-last4').value,
+    ccUseCount:parseInt(document.getElementById('b-cc-usecount').value)||0,
+    ccIssuer:document.getElementById('b-cc-issuer').value,
+    tradein:BSEL.tradein||'',
+    tradeinModel:document.getElementById('b-tradein-model')?document.getElementById('b-tradein-model').value:'',
+    tradeinSerial:'', serialUse:BSEL['serial-use']||'',
+    carrierContract:BSEL['carrier-contract']||'',
+    carrier:BSEL.carrier||'', carrierPlan:BSEL['carrier-plan']||'',
+    seriesCount:'',
+    islandMails: BSEL.chgmail==='あり' ? ['ご注文が変更されました'] : [],
+    isIsl,
+    islReasons:[], delay:isIsl?(parseInt(document.getElementById('b-delay').value)||0):0,
+    ext:isIsl?(parseInt(document.getElementById('b-ext').value)||0):0,
+    chgMailH:0, islEnd:isIsl?(BSEL['isl-end']||''):'',
+    workaround:'', islFix:'',
+    memo:document.getElementById('b-memo').value,
+    orderNo:document.getElementById('b-order-no').value,
+    email:document.getElementById('b-email').value,
+    emailType:BSEL['email-type']||'',
+    phone:(document.getElementById('b-phone')||{value:''}).value,
+    addrNovelty:BSEL['addr-novelty']||'',
+    cartSec:0,daysSinceLast:0,
+    source:'bulk',
+  };
+
+  recs.unshift(rec); persist(); updateHeader();
+
+  // カード情報・メアドを保存
+  persistCard(rec.ccBrand, rec.ccType, rec.ccLast4, rec.ccIssuer);
+  persistEmail(rec.email);
+
+  ['b-wait','b-delay','b-ext','b-memo','b-acct-num','b-tradein-model',
+   'b-cc-last4','b-cc-usecount','b-cc-issuer','b-order-no','b-email'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const bm=document.getElementById('b-model'); if(bm) bm.value='';
+  const bq=document.getElementById('b-qty'); if(bq) bq.value='1';
+  const bcs=document.getElementById('b-cc-select'); if(bcs) bcs.value='';
+  document.getElementById('b-isl').checked=false;
+  document.getElementById('b-isl-fields').style.display='none';
+  const bcd=document.getElementById('b-carrier-detail'); if(bcd) bcd.style.display='none';
+  const btd=document.getElementById('b-tradein-detail'); if(btd) btd.style.display='none';
+  document.querySelectorAll('.chip[data-bg]').forEach(c=>c.classList.remove('on'));
+  Object.keys(BSEL).forEach(k=>delete BSEL[k]);
+  document.getElementById('b-date').value=new Date().toISOString().split('T')[0];
+
+  flash('bulk-msg');
+  renderBulkPreview();
+  } catch(e){ alert('エラー: '+e.message); }
+}
+
+function renderBulkPreview(){
+  const el=document.getElementById('bulk-preview');
+  const recent=recs.filter(r=>r.source==='bulk').slice(0,5);
+  if(!recent.length){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="section-sep">最近の一括入力（${recent.length}件）</div>`+
+    recent.map(r=>`
+    <div class="li ${r.isIsl?'isl':''}">
+      <div class="lt">
+        <div><div class="ldate">${r.date}</div>
+          <span class="lmain">${r.wait}</span><span class="su">時間</span>
+          ${r.isIsl?'<span class="bd b-isl">🏝 島流し</span>':'<span class="bd b-safe">✅ 安全</span>'}
+        </div>
+        <button class="ldel" onclick="delRec(${r.id},true)">🗑</button>
+      </div>
+      <div class="ltags">
+        ${r.model?`<span class="ltag">📱${r.model}</span>`:''}
+        ${r.account?`<span class="ltag">${r.account}</span>`:''}
+        ${r.net?`<span class="ltag">${r.net}</span>`:''}
+        ${r.browser?`<span class="ltag">${r.browser}</span>`:''}
+        ${r.concurrent?`<span class="ltag">同時${r.concurrent}件</span>`:''}
+        ${r.isIsl&&r.delay?`<span class="ltag ltag-r">🏝${r.delay}日延長</span>`:''}
+      </div>
+    </div>`).join('');
+}
 
 // ============================================================
 // ISLAND GUIDE
@@ -1651,7 +1740,7 @@ function renderIslandGuide(){
 // ============================================================
 function updateHeader(){
   document.getElementById('hdr-total').textContent=recs.length;
-  document.getElementById('hdr-pending').textContent=recs.filter(r=>!r.isIsl&&(r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait))).length;
+  document.getElementById('hdr-pending').textContent=recs.filter(r=>r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait)).length;
   document.getElementById('hdr-island').textContent=recs.filter(r=>r.isIsl).length;
 }
 
@@ -1712,13 +1801,16 @@ function renderIsland(){
   ${avoidChart('returnHist','返品・キャンセル歴',recs)}
   ${avoidChart('net','ネットワーク',recs)}
   ${avoidChart('tradein','下取り有無',recs)}
+  ${avoidChart('serialUse','シリアル使用状況',recs)}
   ${avoidChart('carrierContract','キャリア回線契約',recs)}
   ${avoidChart('carrier','キャリア',recs)}
+  ${avoidChart('carrierPlan','契約種別',recs)}
   ${avoidChart('ccBrand','クレカブランド',recs)}
   ${avoidChart('ccType','カード種類',recs)}
   ${avoidChart('delivery','受け取り方法',recs)}
   ${avoidChart('payment','支払い方法',recs)}
   ${avoidChart('timeband','時間帯',recs)}
+  ${avoidChart('addrNovelty','住所新規度',recs)}
 
   ${islands.length>0?islandList(islands):'<div class="success-box">🎉 島流し記録がまだありません！</div>'}
   `;
@@ -1857,7 +1949,7 @@ async function runAI(){
     {k:'acctRole',l:'アカウント種類'},{k:'acctHistory',l:'iPhone購入歴'},{k:'acctAge',l:'アカウント作成時期'},
     {k:'net',l:'ネットワーク'},{k:'device',l:'注文端末'},{k:'browser',l:'ブラウザ/アプリ'},{k:'concurrent',l:'同時注文数'},
     {k:'delivery',l:'受け取り方法'},{k:'payment',l:'支払い方法'},
-    {k:'tradein',l:'下取り有無'},
+    {k:'tradein',l:'下取り有無'},{k:'serialUse',l:'シリアル使用状況'},
     {k:'carrierContract',l:'キャリア回線契約'},{k:'carrier',l:'キャリア'},
     {k:'ccBrand',l:'クレカブランド'},{k:'ccType',l:'カード種類'},
     {k:'returnHist',l:'返品歴'},{k:'seriesCount',l:'シリーズ注文回数'},
@@ -2044,9 +2136,9 @@ function renderAnalysis(){
   ${waitChart('addrNovelty','住所新規度')}
   `;
   renderHistogram();
-  renderPhoneStats();
   renderWinningPatterns();
   renderAccountTimeline();
+  renderIdentitySummary();
 }
 
 function waitChart(field,label){
@@ -2084,44 +2176,18 @@ function renderLog(){
   if(logFilter==='safe')    data=recs.filter(r=>!r.isIsl&&!r.pending);
   document.getElementById('log-cnt').textContent=`(${data.length}件表示)`;
   if(!data.length){ el.innerHTML='<div class="empty">該当する記録がありません</div>'; return; }
-
-  // Group by date
-  const grouped = {};
-  const dateOrder = [];
-  data.forEach(r => {
-    const d = r.date || '不明';
-    if (!grouped[d]) { grouped[d] = []; dateOrder.push(d); }
-    grouped[d].push(r);
-  });
-
-  // Render with date headers
-  let html = '';
-  dateOrder.forEach((date, idx) => {
-    const items = grouped[date];
-    let dateLabel = date;
-    try {
-      const d = new Date(date);
-      const w = ['日','月','火','水','木','金','土'][d.getDay()];
-      const y = d.getFullYear(), m = d.getMonth()+1, day = d.getDate();
-      dateLabel = `${y}年${m}月${day}日（${w}）`;
-    } catch(e) {}
-    const mt = idx === 0 ? '0' : '10px';
-    html += `<div style="font-size:11px;font-weight:700;color:var(--a2);padding:6px 10px;background:rgba(124,58,237,.1);border-radius:7px;margin-bottom:6px;margin-top:${mt}">📅 ${dateLabel} — ${items.length}件</div>`;
-    html += items.map(r => {
-      const isPending=r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait);
-      // isIsl は pending より優先（島流し確定なら待機中より上位表示）
-      const liClass=r.isIsl?'isl':isPending?'pending':'';
-      const statusBadge=r.isIsl
+  el.innerHTML=data.map(r=>{
+    const isPending=r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait);
+    const liClass=isPending?'pending':r.isIsl?'isl':'';
+    const statusBadge=isPending
+      ? '<span class="bd b-wait">⏳ ごちゅあり待ち</span>'
+      : r.isIsl
         ? '<span class="bd b-isl">🏝 島流し</span>'
-        : isPending
-          ? '<span class="bd b-wait">⏳ ごちゅあり待ち</span>'
-          : '<span class="bd b-safe">✅ 安全</span>';
-      const waitDisp=r.isIsl
-        ? `<span style="font-size:13px;color:var(--r2);font-weight:700">🏝 島流し</span>`
-        : isPending
-          ? `<span style="font-size:13px;color:var(--o2);font-weight:700">ごちゅあり待ち中...</span>`
-          : `<span class="lmain">${r.wait}</span><span class="su">時間</span> ${speedBadge(r.wait)}`;
-      return `
+        : '<span class="bd b-safe">✅ 安全</span>';
+    const waitDisp=isPending
+      ? `<span style="font-size:13px;color:var(--o2);font-weight:700">ごちゅあり待ち中...</span>`
+      : `<span class="lmain">${r.wait}</span><span class="su">時間</span> ${speedBadge(r.wait)}`;
+    return `
     <div class="li ${liClass}">
       <div class="lt">
         <div>
@@ -2144,7 +2210,6 @@ function renderLog(){
         ${r.acctRole?`<span class="ltag">🏷${r.acctRole}</span>`:''}
         ${r.acctNum?`<span class="ltag">📌${r.acctNum}</span>`:''}
         ${r.email?`<span class="ltag">📧${r.email}${r.emailType?' <span style="font-size:9px;opacity:.8">('+r.emailType+')</span>':''}</span>`:''}
-        ${r.phone?`<span class="ltag">📞${r.phone}</span>`:''}
         ${r.acctHistory?`<span class="ltag">${r.acctHistory}</span>`:''}
         ${r.returnHist&&r.returnHist!=='なし'?`<span class="ltag ltag-r">返品${r.returnHist}</span>`:''}
         ${r.net?`<span class="ltag">${r.net}</span>`:''}
@@ -2163,13 +2228,12 @@ function renderLog(){
         ${r.isIsl&&r.delay?`<span class="ltag ltag-r">🏝${r.delay}日延長</span>`:''}
         ${(r.islandMails||[]).filter(m=>m!=='メールなし').map(m=>`<span class="ltag ltag-r">📧${m}</span>`).join('')}
         ${r.islFix?`<span class="ltag ${r.islFix==='効果あり'?'':'ltag-r'}">${r.islFix}</span>`:''}
+        ${r.phone?`<span class="ltag">📞*${r.phone}</span>`:''}
         ${r.memo?`<span class="ltag">📝${r.memo}</span>`:''}
         ${r.source==='bulk'?`<span class="ltag" style="color:var(--sub)">一括</span>`:''}
       </div>
     </div>`;
-    }).join('');
-  });
-  el.innerHTML = html;
+  }).join('');
 }
 
 // ============================================================
@@ -2178,6 +2242,7 @@ function renderLog(){
 function saveCfg(){
   cfg.mailMin=parseInt(document.getElementById('cfg-mail-min').value)||60;
   cfg.processingH=parseInt(document.getElementById('cfg-processing-h').value)||24;
+  cfg.cooldownDays=parseInt((document.getElementById('cfg-cooldown-days')||{value:30}).value)||30;
   persistCfg();
   renderIslandGuide();
   renderCfgDisplay();
@@ -2187,18 +2252,15 @@ function saveCfg(){
 function renderCfgDisplay(){
   const el=document.getElementById('cfg-display');
   if(!el) return;
-  const gsStatus = cfg.gsUrl
-    ? `<span style="color:var(--g2)">☁️ 有効</span> <span style="font-size:9px;color:var(--sub)">${cfg.gsUrl.slice(0,40)}...</span>`
-    : `<span style="color:var(--sub)">無効（ローカル保存のみ）</span>`;
   el.innerHTML=`
     ごちゅあり遅延判定: <b>${cfg.mailMin}分以上</b>で遅延とみなす<br>
     処理中ステータス警戒: <b>${cfg.processingH}時間以上</b><br>
-    GS連携: ${gsStatus}
+    識別子冷却期間: <b>${cfg.cooldownDays||30}日</b>
   `;
+  const cdEl=document.getElementById('cfg-cooldown-days'); if(cdEl) cdEl.value=cfg.cooldownDays||30;
+  const cdDisp=document.getElementById('cfg-cooldown-disp'); if(cdDisp) cdDisp.textContent=(cfg.cooldownDays||30)+'日';
   const mm=document.getElementById('cfg-mail-min');   if(mm) mm.value=cfg.mailMin;
   const ph=document.getElementById('cfg-processing-h');if(ph) ph.value=cfg.processingH;
-  // GS URL欄を現在値で埋める
-  const gu=document.getElementById('cfg-gs-url'); if(gu&&!gu.value) gu.value=cfg.gsUrl||'';
 }
 
 function exportData(){
@@ -2215,10 +2277,11 @@ function clearAll(){
 // ============================================================
 // DELETE
 // ============================================================
-function delRec(id){
+function delRec(id,fromBulk=false){
   if(!confirm('この記録を削除しますか？')) return;
   recs=recs.filter(r=>r.id!==id); persist(); updateHeader();
-  renderLog();
+  if(fromBulk) renderBulkPreview();
+  else renderLog();
 }
 
 // ============================================================
@@ -2238,24 +2301,22 @@ function openEditModal(id){
   set('e-wait',r.wait||''); set('e-order-no',r.orderNo||'');
   set('e-account',r.account||''); set('e-acct-role',r.acctRole||'');
   set('e-acct-num',r.acctNum||''); set('e-email',r.email||'');
-  set('e-email-type',r.emailType||''); set('e-phone',r.phone||'');
-  set('e-acct-age',r.acctAge||''); set('e-acct-history',r.acctHistory||'');
+  set('e-email-type',r.emailType||'');
+  set('e-acct-history',r.acctHistory||'');
   set('e-return-hist',r.returnHist||''); set('e-series-count',r.seriesCount||'');
   set('e-net',r.net||''); set('e-device',r.device||''); set('e-browser',r.browser||'');
   set('e-timeband',r.timeband||'');
   set('e-delivery',r.delivery||''); set('e-payment',r.payment||'');
   set('e-concurrent',r.concurrent||'');
-  set('e-carrier-contract',r.carrierContract||''); set('e-carrier',r.carrier||'');
-  set('e-carrier-plan',r.carrierPlan||'');
   set('e-cc-brand',r.ccBrand||''); set('e-cc-type',r.ccType||'');
   set('e-cc-last4',r.ccLast4||''); set('e-cc-usecount',r.ccUseCount||'');
   set('e-cc-issuer',r.ccIssuer||'');
-  set('e-tradein',r.tradein||'');
-  set('e-tradein-model',r.tradeinModel||'');
   document.getElementById('e-isl').checked=!!r.isIsl;
-  set('e-delay',r.delay||0);
+  set('e-delay',r.delay||0); set('e-ext',r.ext||0);
   set('e-isl-end',r.islEnd||''); set('e-workaround',r.workaround||'');
   set('e-memo',r.memo||'');
+  set('e-phone',r.phone||''); setTimeout(()=>onPhoneInput('e-phone','phone-stats-e'),50);
+  set('e-addr-novelty',r.addrNovelty||''); set('e-cart-sec',r.cartSec||'');
 
   const modal=document.getElementById('edit-modal');
   modal.classList.add('open');
@@ -2299,176 +2360,304 @@ function saveEdit(){
     wait:getN('e-wait'), model:get('e-model'),
     qty:parseInt(get('e-qty'))||1, orderNo:get('e-order-no'),
     account:get('e-account'), acctRole:get('e-acct-role'),
-    acctNum:get('e-acct-num'), email:get('e-email'), emailType:get('e-email-type'), phone:get('e-phone'),
-    acctAge:get('e-acct-age'), acctHistory:get('e-acct-history'),
+    acctNum:get('e-acct-num'), email:get('e-email'), emailType:get('e-email-type'),
+    acctHistory:get('e-acct-history'),
     returnHist:get('e-return-hist'), seriesCount:get('e-series-count'),
     net:get('e-net'), device:get('e-device'), browser:get('e-browser'),
     timeband:get('e-timeband'),
     delivery:get('e-delivery'), payment:get('e-payment'),
     concurrent:get('e-concurrent'),
-    carrierContract:get('e-carrier-contract'), carrier:get('e-carrier'),
-    carrierPlan:get('e-carrier-plan'),
     ccBrand:get('e-cc-brand'), ccType:get('e-cc-type'),
     ccLast4:get('e-cc-last4'), ccUseCount:parseInt(get('e-cc-usecount'))||0,
     ccIssuer:get('e-cc-issuer'),
-    tradein:get('e-tradein'),
-    tradeinModel:get('e-tradein-model'),
     isIsl:document.getElementById('e-isl').checked,
-    delay:getN('e-delay'),
+    delay:getN('e-delay'), ext:getN('e-ext'),
     islEnd:get('e-isl-end'), workaround:get('e-workaround'),
     memo:get('e-memo'),
+    phone:get('e-phone'),
+    addrNovelty:get('e-addr-novelty'),
+    cartSec:parseInt(get('e-cart-sec'))||0,
   };
 
   persist(); updateHeader();
   persistEmail(recs[idx].email);
-  persistPhone(recs[idx].phone);
   flash('edit-save-msg');
   setTimeout(()=>{ document.getElementById('edit-modal').classList.remove('open'); editingId=null; renderLog(); }, 1200);
 }
 
 
 // ============================================================
+// 🔑 識別3要素 — 使用回数・経過日数・冷却状況
+// ============================================================
+function getCooldownDays() { return cfg.cooldownDays || 30; }
+
+function getUsageStats(field, value) {
+  if (!value || value.length < 1) return null;
+  const matching = recs.filter(r => r[field] === value);
+  if (!matching.length) return { count: 0, lastDate: null, daysSince: null };
+  const sorted = [...matching].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const lastDate = sorted[0].date;
+  const daysSince = Math.round((Date.now() - new Date(lastDate).getTime()) / 86400000);
+  const islCount = matching.filter(r => r.isIsl).length;
+  const islRate = Math.round(islCount / matching.length * 100);
+  return { count: matching.length, lastDate, daysSince, islCount, islRate };
+}
+
+function renderUsageStats(stats, targetId, autoFillCountId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  if (!stats) { el.innerHTML = '<div class="usage-empty">入力すると使用履歴が表示されます</div>'; return; }
+  if (stats.count === 0) {
+    el.innerHTML = '<div class="usage-row"><span class="us-badge us-new">🆕 初使用（記録なし）</span></div>';
+    return;
+  }
+  const cd = getCooldownDays();
+  let statusClass, statusText, cooldownPct;
+  if (stats.daysSince >= cd) {
+    statusClass='us-ok'; statusText='🟢 使用可能'; cooldownPct=100;
+  } else if (stats.daysSince >= Math.floor(cd * 0.5)) {
+    statusClass='us-warn'; statusText='🟡 要注意（冷却中の可能性）'; cooldownPct=Math.round(stats.daysSince/cd*100);
+  } else {
+    statusClass='us-ng'; statusText='🔴 冷却中の可能性大'; cooldownPct=Math.round(stats.daysSince/cd*100);
+  }
+  el.innerHTML = `
+    <div class="usage-row">
+      <span class="us-badge us-count">📊 ${stats.count}回使用</span>
+      <span class="us-badge us-date">📅 最終: ${stats.lastDate}（<b>${stats.daysSince}日前</b>）</span>
+      <span class="us-badge ${statusClass}">${statusText}</span>
+      ${stats.islRate > 0 ? `<span class="us-badge us-ng">🏝 島流し${stats.islRate}%</span>` : ''}
+    </div>
+    <div class="cooldown-bar">
+      <div class="cooldown-fill" style="width:${cooldownPct}%;background:${cooldownPct>=100?'var(--green)':cooldownPct>=50?'var(--orange)':'var(--red)'}"></div>
+    </div>
+    <div style="font-size:8px;color:var(--sub);text-align:right;margin-top:1px">冷却進行度 ${cooldownPct}% (${stats.daysSince}/${cd}日)</div>`;
+  if (autoFillCountId) {
+    const uc = document.getElementById(autoFillCountId);
+    if (uc && !uc.value) uc.value = stats.count + 1;
+  }
+}
+
+function onPhoneInput(inputId, statsId) {
+  const val = (document.getElementById(inputId)||{}).value || '';
+  if (val.length < 4) {
+    const el = document.getElementById(statsId);
+    if (el) el.innerHTML = '<div class="usage-empty">下4桁を入力してください</div>';
+    return;
+  }
+  renderUsageStats(getUsageStats('phone', val), statsId, null);
+  setTimeout(updateRiskScore, 10);
+}
+
+function syncCardInput(val) {
+  const main = document.getElementById('r-cc-last4');
+  if (main && main.value !== val) main.value = val;
+  renderUsageStats(getUsageStats('ccLast4', val), 'card-stats-r', 'r-cc-usecount');
+  setTimeout(updateRiskScore, 10);
+}
+function syncCardFromMain(val) {
+  const top = document.getElementById('r-card-top');
+  if (top && top.value !== val) top.value = val;
+  renderUsageStats(getUsageStats('ccLast4', val), 'card-stats-r', 'r-cc-usecount');
+}
+function onCardTopInput() {
+  const top = document.getElementById('r-card-top');
+  if (top) syncCardInput(top.value);
+}
+
+function syncEmailInput(val) {
+  const main = document.getElementById('r-email');
+  if (main && main.value !== val) main.value = val;
+  renderUsageStats(getUsageStats('email', val), 'email-stats-r', null);
+  setTimeout(updateRiskScore, 10);
+}
+function syncEmailFromMain(val) {
+  const top = document.getElementById('r-email-top');
+  if (top && top.value !== val) top.value = val;
+  renderUsageStats(getUsageStats('email', val), 'email-stats-r', null);
+}
+
+// ============================================================
+// 🔑 識別3要素 冷却状況サマリー（分析タブ）
+// ============================================================
+function renderIdentitySummary() {
+  const el = document.getElementById('ana-identity');
+  if (!el) return;
+  const cd = getCooldownDays();
+  const phones={}, cards={}, emails={};
+  recs.forEach(r => {
+    if(r.phone){ if(!phones[r.phone])phones[r.phone]=[]; phones[r.phone].push(r); }
+    if(r.ccLast4){ if(!cards[r.ccLast4])cards[r.ccLast4]=[]; cards[r.ccLast4].push(r); }
+    if(r.email){ if(!emails[r.email])emails[r.email]=[]; emails[r.email].push(r); }
+  });
+  if(!Object.keys(phones).length && !Object.keys(cards).length && !Object.keys(emails).length){ el.innerHTML=''; return; }
+
+  function buildRows(map, icon) {
+    return Object.entries(map)
+      .sort(([,a],[,b]) => new Date(b.sort((x,y)=>new Date(y.date)-new Date(x.date))[0].date) - new Date(a.sort((x,y)=>new Date(y.date)-new Date(x.date))[0].date))
+      .map(([key, items]) => {
+        const sorted=[...items].sort((a,b)=>new Date(b.date)-new Date(a.date));
+        const lastDate=sorted[0].date;
+        const daysSince=Math.round((Date.now()-new Date(lastDate).getTime())/86400000);
+        const islN=items.filter(r=>r.isIsl).length;
+        const rate=Math.round(islN/items.length*100);
+        const pct_=Math.min(100,Math.round(daysSince/cd*100));
+        let sc,st;
+        if(daysSince>=cd){sc='us-ok';st='🟢 使用可能';}
+        else if(daysSince>=Math.floor(cd*0.5)){sc='us-warn';st='🟡 要注意';}
+        else{sc='us-ng';st='🔴 冷却中';}
+        const dk=key.length>28?key.slice(0,25)+'...':key;
+        return `<div style="background:var(--card2);border-radius:9px;padding:9px 11px;margin-bottom:6px;border:1px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:700">${icon} ${dk}</span>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <span class="us-badge us-count">使用${items.length}回</span>
+              <span class="us-badge us-date">${lastDate}（${daysSince}日前）</span>
+              ${rate>0?`<span class="us-badge us-ng">🏝${rate}%</span>`:''}
+              <span class="us-badge ${sc}">${st}</span>
+            </div>
+          </div>
+          <div class="cooldown-bar" style="margin-top:6px">
+            <div class="cooldown-fill" style="width:${pct_}%;background:${pct_>=100?'var(--green)':pct_>=50?'var(--orange)':'var(--red)'}"></div>
+          </div>
+          <div style="font-size:8px;color:var(--sub);text-align:right;margin-top:1px">冷却進行度 ${pct_}% (${daysSince}/${cd}日)</div>
+        </div>`;
+    }).join('');
+  }
+
+  const phoneRows=buildRows(phones,'📞');
+  const cardRows=buildRows(cards,'💳');
+  const emailRows=buildRows(emails,'📧');
+  el.innerHTML=`
+  <div class="card" style="border-color:rgba(59,130,246,.3);background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(124,58,237,.03))">
+    <div class="card-title" style="background:linear-gradient(90deg,#93c5fd,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent">🔑 識別3要素 冷却状況サマリー（冷却目安: ${cd}日）</div>
+    ${phoneRows?`<div style="font-size:10px;font-weight:700;color:var(--sub);margin:8px 0 4px">📞 電話番号</div>${phoneRows}`:''}
+    ${cardRows?`<div style="font-size:10px;font-weight:700;color:var(--sub);margin:8px 0 4px">💳 カード番号</div>${cardRows}`:''}
+    ${emailRows?`<div style="font-size:10px;font-weight:700;color:var(--sub);margin:8px 0 4px">📧 メールアドレス</div>${emailRows}`:''}
+  </div>`;
+}
+
+// ============================================================
 // ① リアルタイム危険度スコア
 // ============================================================
 const RISK_DEFAULTS = {
-  concurrent: {'0': -15, '1': 0, '2': 15, '3以上': 30},
-  net: {'Wi-Fi': -10, '4G': -5, '5G': -5, 'VPN使用': 20, 'VPN+Wi-Fi': 15},
-  account: {'新規': 10, '既存': -10, 'Family共有': 5, 'ゲスト': 5},
-  'acct-history': {'購入歴あり': -15, '購入歴なし': 10},
-  'acct-age': {'1ヶ月未満': 20, '1〜6ヶ月': 10, '6ヶ月〜1年': 0, '1年以上': -10, '5年以上': -15},
-  'return-hist': {'なし': -10, '1回あり': 5, '2〜3回あり': 15, '4回以上あり': 25},
-  tradein: {'あり': -8, 'なし': 0},
-  'carrier-contract': {'あり': -8, 'なし': 0},
-  browser: {'Apple Storeアプリ': -10, 'Safari': -5, 'Chrome': 0, 'Brave': 0, 'Firefox': 5, 'Edge': 5},
+  concurrent: {'0':-15,'1':0,'2':15,'3以上':30},
+  net: {'Wi-Fi':-10,'4G':-5,'5G':-5,'VPN使用':20,'VPN+Wi-Fi':15},
+  account: {'新規':10,'既存':-10,'Family共有':5,'ゲスト':5},
+  'acct-history': {'購入歴あり':-15,'購入歴なし':10},
+  'acct-age': {'1ヶ月未満':20,'1〜6ヶ月':10,'6ヶ月〜1年':0,'1年以上':-10,'5年以上':-15},
+  'return-hist': {'なし':-10,'1回あり':5,'2〜3回あり':15,'4回以上あり':25},
+  tradein: {'あり':-8,'なし':0},
+  'carrier-contract': {'あり':-8,'なし':0},
+  browser: {'Apple Storeアプリ':-10,'Safari':-5,'Chrome':0,'Brave':0,'Firefox':5,'Edge':5},
+  'serial-use': {'初使用（未使用シリアル）':-10,'使用済みシリアル':5},
+  'addr-novelty': {'初回使用':10,'過去使用済み':-10,'転送先住所':5,'住所変更後':10},
 };
 
 function calcRiskScore() {
   let score = 50;
   const factors = [];
-  const total = recs.length;
+  const qty = parseInt((document.getElementById('r-qty')||{value:'1'}).value)||1;
+  if(qty>=3){score+=25;factors.push({l:'台数'+qty+'台',up:true});}
+  else if(qty===2){score+=12;factors.push({l:'台数2台',up:true});}
 
-  // qty risk
-  const qty = parseInt(document.getElementById('r-qty') ? document.getElementById('r-qty').value : 1) || 1;
-  if (qty >= 3) { score += 25; factors.push({l:'台数'+qty+'台', up:true}); }
-  else if (qty === 2) { score += 12; factors.push({l:'台数2台', up:true}); }
-
-  const FIELDS = ['concurrent','net','account','acct-history','acct-age','return-hist','tradein','carrier-contract','browser'];
-
-  FIELDS.forEach(field => {
-    const cur = SEL[field];
-    if (!cur) return;
-
-    let delta = 0;
-    // Use historical data if available
-    const matching = recs.filter(r => r[field] === cur);
-    if (matching.length >= 3) {
-      const islRate = pct(matching.filter(r => r.isIsl).length, matching.length);
-      delta = islRate - 30; // relative to 30% baseline
-    } else {
-      delta = (RISK_DEFAULTS[field] || {})[cur] || 0;
-    }
-
-    if (delta !== 0) {
-      score += delta;
-      factors.push({l: cur, up: delta > 0});
-    }
+  ['concurrent','net','account','acct-history','acct-age','return-hist','tradein','carrier-contract','browser','serial-use','addr-novelty'].forEach(field=>{
+    const cur=SEL[field]; if(!cur) return;
+    const matching=recs.filter(r=>r[field]===cur);
+    let delta=0;
+    if(matching.length>=3) delta=pct(matching.filter(r=>r.isIsl).length,matching.length)-30;
+    else delta=(RISK_DEFAULTS[field]||{})[cur]||0;
+    if(delta!==0){ score+=delta; factors.push({l:cur,up:delta>0}); }
   });
 
-  return { score: Math.max(0, Math.min(100, Math.round(score))), factors };
+  // Phone cooldown risk
+  const phone=(document.getElementById('r-phone')||{value:''}).value;
+  if(phone&&phone.length>=4){
+    const ps=getUsageStats('phone',phone);
+    if(ps&&ps.count>0&&ps.daysSince<getCooldownDays()){score+=20;factors.push({l:'電話冷却中?',up:true});}
+  }
+  // Card cooldown risk
+  const card=(document.getElementById('r-card-top')||{value:''}).value||
+              (document.getElementById('r-cc-last4')||{value:''}).value;
+  if(card&&card.length>=4){
+    const cs=getUsageStats('ccLast4',card);
+    if(cs&&cs.count>0&&cs.daysSince<getCooldownDays()){score+=15;factors.push({l:'カード冷却中?',up:true});}
+    else if(cs&&cs.count===0){score-=0;}
+  }
+
+  return {score:Math.max(0,Math.min(100,Math.round(score))),factors};
 }
 
-function updateRiskScore() {
-  const numEl = document.getElementById('risk-num');
-  const barEl = document.getElementById('risk-bar');
-  const lblEl = document.getElementById('risk-label');
-  const facEl = document.getElementById('risk-factors');
-  if (!numEl) return;
-
-  const { score, factors } = calcRiskScore();
-  numEl.textContent = score;
-
-  let col, lbl;
-  if (score < 35) { col = 'var(--green)'; lbl = '🟢 低リスク'; }
-  else if (score < 60) { col = 'var(--orange)'; lbl = '🟡 中リスク'; }
-  else { col = 'var(--red)'; lbl = '🔴 高リスク'; }
-
-  numEl.style.color = col;
-  barEl.style.width = score + '%';
-  barEl.style.background = col;
-  lblEl.textContent = lbl;
-  lblEl.style.color = col;
-
-  facEl.innerHTML = factors.slice(0, 8).map(f =>
-    `<span class="risk-factor ${f.up ? 'rf-up' : 'rf-down'}">${f.up ? '▲' : '▼'} ${f.l}</span>`
-  ).join('');
+function updateRiskScore(){
+  const numEl=document.getElementById('risk-num');
+  const barEl=document.getElementById('risk-bar');
+  const lblEl=document.getElementById('risk-label');
+  const facEl=document.getElementById('risk-factors');
+  if(!numEl) return;
+  const{score,factors}=calcRiskScore();
+  numEl.textContent=score;
+  let col,lbl;
+  if(score<35){col='var(--green)';lbl='🟢 低リスク';}
+  else if(score<60){col='var(--orange)';lbl='🟡 中リスク';}
+  else{col='var(--red)';lbl='🔴 高リスク';}
+  numEl.style.color=col; barEl.style.width=score+'%'; barEl.style.background=col;
+  lblEl.textContent=lbl; lblEl.style.color=col;
+  facEl.innerHTML=factors.slice(0,8).map(f=>`<span class="risk-factor ${f.up?'rf-up':'rf-down'}">${f.up?'▲':'▼'} ${f.l}</span>`).join('');
 }
 
-// Hook risk update into chip clicks (run after existing chip handlers)
-document.addEventListener('DOMContentLoaded', () => {});
-// Attach to all record-tab chips via mutation — simpler: patch the chip handler
-(function patchChipHandlers() {
-  const origChips = document.querySelectorAll('.chip[data-g]');
-  origChips.forEach(c => {
-    c.addEventListener('click', () => setTimeout(updateRiskScore, 10));
+(function patchChipHandlers(){
+  document.querySelectorAll('.chip[data-g]').forEach(c=>{
+    c.addEventListener('click',()=>setTimeout(updateRiskScore,10));
   });
-  const qtyEl = document.getElementById('r-qty');
-  if (qtyEl) qtyEl.addEventListener('change', updateRiskScore);
+  const qtyEl=document.getElementById('r-qty');
+  if(qtyEl) qtyEl.addEventListener('change',updateRiskScore);
 })();
 
+// ============================================================
+// ⑤ 前回注文からの経過日数
+// ============================================================
+function calcDaysSinceLast(){
+  const dateVal=document.getElementById('r-date').value;
+  const el=document.getElementById('r-days-since');
+  if(!el||!dateVal||!recs.length){if(el)el.value='';return;}
+  const cur=new Date(dateVal).getTime();
+  const prev=recs.filter(r=>r.date&&new Date(r.date).getTime()<cur&&!r.isIsl)
+    .sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!prev.length){el.value='';return;}
+  el.value=Math.round((cur-new Date(prev[0].date).getTime())/86400000);
+}
 
 // ============================================================
 // ② ごちゅあり到着時間 ヒストグラム
 // ============================================================
-function renderHistogram() {
-  const el = document.getElementById('ana-histogram');
-  if (!el) return;
-
-  const validRecs = recs.filter(r => r.wait !== null && r.wait !== undefined && !isNaN(r.wait) && r.wait >= 0);
-  if (validRecs.length < 3) { el.innerHTML = ''; return; }
-
-  const buckets = [
-    {lbl:'〜1h',max:1},
-    {lbl:'1〜3h',max:3},
-    {lbl:'3〜6h',max:6},
-    {lbl:'6〜12h',max:12},
-    {lbl:'12〜24h',max:24},
-    {lbl:'24〜48h',max:48},
-    {lbl:'48h+',max:Infinity}
-  ];
-
-  const counts = buckets.map((b, i) => {
-    const min = i === 0 ? 0 : buckets[i-1].max;
-    const n = validRecs.filter(r => r.wait >= min && r.wait < b.max).length;
-    const islN = validRecs.filter(r => r.wait >= min && r.wait < b.max && r.isIsl).length;
-    return { lbl: b.lbl, n, islN };
-  }).filter(b => b.n > 0 || true);
-
-  const maxN = Math.max(...counts.map(b => b.n), 1);
-  const total = validRecs.length;
-
-  const bars = counts.map(b => {
-    const h = Math.round(b.n / maxN * 80);
-    const col = b.n === 0 ? 'var(--border2)' : '#7c3aed';
-    const pctDisp = pct(b.n, total);
+function renderHistogram(){
+  const el=document.getElementById('ana-histogram');
+  if(!el) return;
+  const validRecs=recs.filter(r=>r.wait!==null&&r.wait!==undefined&&!isNaN(r.wait)&&r.wait>=0);
+  if(validRecs.length<3){el.innerHTML='';return;}
+  const buckets=[{lbl:'〜1h',max:1},{lbl:'1〜3h',max:3},{lbl:'3〜6h',max:6},{lbl:'6〜12h',max:12},{lbl:'12〜24h',max:24},{lbl:'24〜48h',max:48},{lbl:'48h+',max:Infinity}];
+  const counts=buckets.map((b,i)=>{
+    const min=i===0?0:buckets[i-1].max;
+    return{lbl:b.lbl,n:validRecs.filter(r=>r.wait>=min&&r.wait<b.max).length};
+  });
+  const maxN=Math.max(...counts.map(b=>b.n),1);
+  const total=validRecs.length;
+  const bars=counts.map(b=>{
+    const h=Math.round(b.n/maxN*80);
     return `<div class="hist-col">
-      <div class="hist-cnt">${b.n > 0 ? b.n : ''}</div>
-      <div class="hist-bar" style="height:${Math.max(h,2)}px;background:${col}"></div>
-      <div class="hist-lbl">${b.lbl}<br>${pctDisp > 0 ? pctDisp+'%' : ''}</div>
+      <div class="hist-cnt">${b.n>0?b.n:''}</div>
+      <div class="hist-bar" style="height:${Math.max(h,2)}px;background:${b.n===0?'var(--border2)':'#7c3aed'}"></div>
+      <div class="hist-lbl">${b.lbl}<br>${b.n>0?pct(b.n,total)+'%':''}</div>
     </div>`;
   }).join('');
-
-  // median line calculation
-  const sorted = [...validRecs].sort((a,b) => a.wait - b.wait);
-  const median = sorted[Math.floor(sorted.length/2)].wait.toFixed(1);
-  const avg_ = (validRecs.reduce((s,r) => s + r.wait, 0) / validRecs.length).toFixed(1);
-
-  el.innerHTML = `
-  <div class="card">
+  const sorted=[...validRecs].sort((a,b)=>a.wait-b.wait);
+  const median=sorted[Math.floor(sorted.length/2)].wait.toFixed(1);
+  const avgW=(validRecs.reduce((s,r)=>s+r.wait,0)/validRecs.length).toFixed(1);
+  el.innerHTML=`<div class="card">
     <div class="card-title">② 📊 ごちゅあり到着時間 分布ヒストグラム（${validRecs.length}件）</div>
     <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-      <div class="sc" style="flex:1;min-width:60px"><div class="sv" style="font-size:18px;color:var(--a2)">${avg_}</div><div class="su">時間</div><div class="sl">平均</div></div>
+      <div class="sc" style="flex:1;min-width:60px"><div class="sv" style="font-size:18px;color:var(--a2)">${avgW}</div><div class="su">時間</div><div class="sl">平均</div></div>
       <div class="sc" style="flex:1;min-width:60px"><div class="sv" style="font-size:18px;color:var(--g2)">${median}</div><div class="su">時間</div><div class="sl">中央値</div></div>
-      <div class="sc" style="flex:1;min-width:60px"><div class="sv" style="font-size:18px;color:var(--green)">${sorted[0].wait.toFixed(1)}</div><div class="su">時間</div><div class="sl">最速</div></div>
+      <div class="sc" style="flex:1;min-width:60px"><div class="sv" style="font-size:18px;color:var(--green)">${sorted[0].wait.toFixed(1)}</div><div class="su">時間</div><div class="sl">最速⚡</div></div>
     </div>
     <div class="hist-wrap">${bars}</div>
     <div style="font-size:10px;color:var(--sub);margin-top:6px;text-align:center">バーの高さ = 件数割合　横軸 = ごちゅあり到着時間</div>
@@ -2478,43 +2667,33 @@ function renderHistogram() {
 // ============================================================
 // ⑧ 勝ちパターン自動抽出
 // ============================================================
-function renderWinningPatterns() {
-  const el = document.getElementById('ana-patterns');
-  if (!el) return;
-
-  const safes = recs.filter(r => !r.isIsl && r.wait !== null && !isNaN(r.wait));
-  if (safes.length < 3) { el.innerHTML = ''; return; }
-
-  const FIELDS = [
-    {k:'concurrent',l:'同時注文数'},{k:'account',l:'アカウント状態'},
-    {k:'acctRole',l:'アカウント種類'},{k:'net',l:'ネットワーク'},
-    {k:'browser',l:'ブラウザ/アプリ'},{k:'device',l:'注文端末'},
-    {k:'tradein',l:'下取り'},{k:'carrierContract',l:'回線契約'},
-    {k:'acctHistory',l:'iPhone購入歴'},{k:'acctAge',l:'アカ作成時期'},
-    {k:'returnHist',l:'返品歴'},{k:'payment',l:'支払い'},
-    {k:'delivery',l:'受取方法'},{k:'timeband',l:'時間帯'},
+function renderWinningPatterns(){
+  const el=document.getElementById('ana-patterns');
+  if(!el) return;
+  if(recs.length<3){el.innerHTML='';return;}
+  const FIELDS=[
+    {k:'concurrent',l:'同時注文数'},{k:'account',l:'アカウント状態'},{k:'acctRole',l:'アカウント種類'},
+    {k:'net',l:'ネットワーク'},{k:'browser',l:'ブラウザ/アプリ'},{k:'device',l:'注文端末'},
+    {k:'tradein',l:'下取り'},{k:'carrierContract',l:'回線契約'},{k:'acctHistory',l:'iPhone購入歴'},
+    {k:'acctAge',l:'アカ作成時期'},{k:'returnHist',l:'返品歴'},{k:'payment',l:'支払い'},
+    {k:'delivery',l:'受取方法'},{k:'serialUse',l:'シリアル'},{k:'addrNovelty',l:'住所新規度'},
+    {k:'timeband',l:'時間帯'},
   ];
-
-  const scores = [];
-  FIELDS.forEach(f => {
-    const grp = gbf(recs.filter(r => r[f.k]), f.k);
-    Object.entries(grp).forEach(([val, items]) => {
-      if (items.length < 2) return;
-      const safeRate = pct(items.filter(r => !r.isIsl).length, items.length);
-      const safeItems = items.filter(r => !r.isIsl && r.wait !== null && !isNaN(r.wait));
-      const avgW = safeItems.length ? safeItems.reduce((s,r) => s+r.wait, 0) / safeItems.length : 999;
-      // composite score: high safe rate + fast wait
-      const composite = safeRate * 0.6 + Math.max(0, 100 - avgW * 2) * 0.4;
-      scores.push({ field: f.l, val, safeRate, avgW: avgW.toFixed(1), n: items.length, safeN: safeItems.length, composite });
+  const scores=[];
+  FIELDS.forEach(f=>{
+    const grp=gbf(recs.filter(r=>r[f.k]),f.k);
+    Object.entries(grp).forEach(([val,items])=>{
+      if(items.length<2) return;
+      const safeRate=pct(items.filter(r=>!r.isIsl).length,items.length);
+      const si=items.filter(r=>!r.isIsl&&r.wait!==null&&!isNaN(r.wait));
+      const avgW=si.length?si.reduce((s,r)=>s+r.wait,0)/si.length:999;
+      scores.push({field:f.l,val,safeRate,avgW:avgW.toFixed(1),n:items.length,composite:safeRate*0.6+Math.max(0,100-avgW*2)*0.4});
     });
   });
-
-  scores.sort((a, b) => b.composite - a.composite);
-  const top5 = scores.slice(0, 5);
-
-  if (!top5.length) { el.innerHTML = ''; return; }
-
-  const items = top5.map((p, i) => `
+  scores.sort((a,b)=>b.composite-a.composite);
+  const top5=scores.slice(0,5);
+  if(!top5.length){el.innerHTML='';return;}
+  const items=top5.map((p,i)=>`
   <div class="pat-item">
     <div style="display:flex;align-items:center;gap:8px">
       <span class="pat-rank">#${i+1}</span>
@@ -2523,164 +2702,94 @@ function renderWinningPatterns() {
       <span class="bd b-safe" style="margin-left:auto">安全率${p.safeRate}%</span>
     </div>
     <div class="pat-tags">
-      <span class="pat-tag">📊 ${p.n}件のデータ</span>
+      <span class="pat-tag">📊 ${p.n}件</span>
       <span class="pat-tag">⏱ 平均${p.avgW}h</span>
-      <span class="pat-tag">✅ ${p.safeRate}% 安全</span>
+      <span class="pat-tag">✅ ${p.safeRate}%安全</span>
     </div>
-    <div class="pat-stat">この条件での注文は島流し回避率が高く、ごちゅありも比較的速い傾向があります。</div>
+    <div class="pat-stat">この条件での注文は島流し回避率が高い傾向があります。</div>
   </div>`).join('');
-
-  el.innerHTML = `<div class="card"><div class="card-title">⑧ 🏆 勝ちパターン自動抽出 TOP5</div>${items}</div>`;
+  el.innerHTML=`<div class="card"><div class="card-title">⑧ 🏆 勝ちパターン自動抽出 TOP5</div>${items}</div>`;
 }
 
 // ============================================================
 // ⑨ アカウント別タイムライン
 // ============================================================
-function renderAccountTimeline() {
-  const el = document.getElementById('ana-timeline');
-  if (!el) return;
-
-  // Group by email (fall back to acctNum)
-  const keyed = {};
-  recs.forEach(r => {
-    const key = r.email || r.acctNum || '(不明)';
-    if (!keyed[key]) keyed[key] = [];
+function renderAccountTimeline(){
+  const el=document.getElementById('ana-timeline');
+  if(!el) return;
+  const keyed={};
+  recs.forEach(r=>{
+    const key=r.email||r.acctNum||(r.phone?'📞*'+r.phone:'(不明)');
+    if(!keyed[key])keyed[key]=[];
     keyed[key].push(r);
   });
-
-  if (Object.keys(keyed).length < 1) { el.innerHTML = ''; return; }
-
-  // Sort accounts by most recent order
-  const sorted = Object.entries(keyed)
-    .sort(([,a],[,b]) => new Date(b[0].date) - new Date(a[0].date))
-    .slice(0, 8); // max 8 accounts
-
-  const acctBlocks = sorted.map(([key, orders]) => {
-    const byDate = [...orders].sort((a,b) => new Date(a.date) - new Date(b.date));
-    const safeN = orders.filter(r => !r.isIsl).length;
-    const islN = orders.filter(r => r.isIsl).length;
-    const safeRate = pct(safeN, orders.length);
-
-    const items = byDate.slice(-10).map(r => {
-      const isPend = r.pending || r.wait === null || isNaN(r.wait);
-      const cls = isPend ? 'tl-pend' : r.isIsl ? 'tl-isl' : 'tl-safe';
-      const icon = isPend ? '⏳' : r.isIsl ? '🏝' : '✅';
-      const waitStr = isPend ? '待ち中' : r.wait + 'h';
-      const model = r.model ? r.model.replace('/ ','').slice(0,20) : '';
+  if(!Object.keys(keyed).length){el.innerHTML='';return;}
+  const sorted=Object.entries(keyed)
+    .sort(([,a],[,b])=>new Date(b[0].date)-new Date(a[0].date))
+    .slice(0,8);
+  const acctBlocks=sorted.map(([key,orders])=>{
+    const byDate=[...orders].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const safeN=orders.filter(r=>!r.isIsl).length;
+    const items=byDate.slice(-10).map(r=>{
+      const isPend=r.pending||r.wait===null||isNaN(r.wait);
+      const cls=isPend?'tl-pend':r.isIsl?'tl-isl':'tl-safe';
+      const icon=isPend?'⏳':r.isIsl?'🏝':'✅';
+      const model=r.model?r.model.slice(0,18):'';
       return `<div class="tl-item ${cls}">
         <div class="tl-date">${r.date}<br><small>${r.orderTime||''}</small></div>
-        <div class="tl-body">${icon} ${r.qty>1?'×'+r.qty+'台 ':''}${model||''}${r.isIsl?' 🏝'+r.delay+'日延':' '+waitStr}${r.concurrent?' 同時'+r.concurrent+'件':''}</div>
+        <div class="tl-body">${icon} ${r.qty>1?'×'+r.qty+'台 ':''}${model}${r.isIsl?' 🏝'+r.delay+'日延':r.wait?' '+r.wait+'h':' 待ち中'}${r.concurrent?' 同時'+r.concurrent+'件':''}</div>
       </div>`;
     }).join('');
-
-    const displayKey = key.length > 30 ? key.slice(0,27)+'...' : key;
+    const dk=key.length>30?key.slice(0,27)+'...':key;
     return `<div class="tl-acct">
       <div class="tl-head">
-        <span>📧 ${displayKey}</span>
-        <span style="font-size:10px;color:var(--sub)">${orders.length}件 / 安全率${safeRate}%</span>
-      </div>
-      ${items}
+        <span>📧 ${dk}</span>
+        <span style="font-size:10px;color:var(--sub)">${orders.length}件 / 安全率${pct(safeN,orders.length)}%</span>
+      </div>${items}
     </div>`;
   }).join('');
-
-  el.innerHTML = `<div class="card"><div class="card-title">⑨ 👤 アカウント別タイムライン</div>${acctBlocks}</div>`;
-}
-
-// ============================================================
-// 📞 電話番号別使用状況
-// ============================================================
-function renderPhoneStats(){
-  const el = document.getElementById('ana-phone-stats');
-  if (!el) return;
-
-  const phoneRecs = recs.filter(r => r.phone);
-  if (phoneRecs.length < 1) { el.innerHTML = ''; return; }
-
-  const keyed = {};
-  phoneRecs.forEach(r => {
-    const k = r.phone;
-    if (!keyed[k]) keyed[k] = [];
-    keyed[k].push(r);
-  });
-
-  const sorted = Object.entries(keyed)
-    .sort(([,a],[,b]) => b.length - a.length)
-    .slice(0, 20);
-
-  const rows = sorted.map(([phone, orders]) => {
-    const pending = orders.filter(r => !r.isIsl && (r.pending || r.wait === null || isNaN(r.wait))).length;
-    const island = orders.filter(r => r.isIsl).length;
-    const safe = orders.filter(r => !r.isIsl && !r.pending && r.wait !== null && !isNaN(r.wait)).length;
-    const safeRate = pct(safe, orders.length);
-    const col = safeRate >= 80 ? 'var(--green)' : safeRate >= 50 ? 'var(--orange)' : 'var(--red)';
-    return `
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="flex:1;font-size:12px;font-weight:600">📞 ${phone}</div>
-      <div style="display:flex;gap:5px;flex-shrink:0;align-items:center">
-        ${pending>0?`<span class="bd b-wait">⏳${pending}</span>`:''}
-        ${island>0?`<span class="bd b-isl">🏝${island}</span>`:''}
-        ${safe>0?`<span class="bd b-safe">✅${safe}</span>`:''}
-        <span style="font-size:10px;color:${col};font-weight:700;min-width:32px;text-align:right">${safeRate}%</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  el.innerHTML = `<div class="card">
-    <div class="card-title">📞 電話番号別 使用状況</div>
-    <div style="font-size:9px;color:var(--sub);margin-bottom:8px">⏳待ち中 / 🏝島流し / ✅安全 の件数と安全率</div>
-    ${rows}
-  </div>`;
+  el.innerHTML=`<div class="card"><div class="card-title">⑨ 👤 アカウント別タイムライン</div>${acctBlocks}</div>`;
 }
 
 // ============================================================
 // ⑦ JSONインポート
 // ============================================================
-function importData(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const parsed = JSON.parse(e.target.result);
-      const incoming = parsed.records || parsed; // support both formats
-      if (!Array.isArray(incoming)) throw new Error('recordsが配列ではありません');
-
-      const existingIds = new Set(recs.map(r => r.id));
-      let added = 0, skipped = 0;
-      incoming.forEach(r => {
-        if (!r.id || existingIds.has(r.id)) { skipped++; return; }
-        recs.push(r);
-        existingIds.add(r.id);
-        added++;
+function importData(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const parsed=JSON.parse(e.target.result);
+      const incoming=parsed.records||parsed;
+      if(!Array.isArray(incoming)) throw new Error('recordsが配列ではありません');
+      const existingIds=new Set(recs.map(r=>r.id));
+      let added=0,skipped=0;
+      incoming.forEach(r=>{
+        if(!r.id||existingIds.has(r.id)){skipped++;return;}
+        recs.push(r); existingIds.add(r.id); added++;
       });
-
-      // sort by date desc
-      recs.sort((a, b) => new Date(b.date) - new Date(a.date));
-      persist();
-      updateHeader();
-
-      const resEl = document.getElementById('import-result');
-      if (resEl) resEl.innerHTML = `✅ <b>${added}件</b> 追加、<b>${skipped}件</b> スキップ（重複または無効）`;
-      flash('import-msg');
-      input.value = '';
-    } catch(err) {
-      alert('インポートエラー: ' + err.message);
-    }
+      recs.sort((a,b)=>new Date(b.date)-new Date(a.date));
+      persist(); updateHeader();
+      const resEl=document.getElementById('import-result');
+      if(resEl) resEl.innerHTML=`✅ <b>${added}件</b> 追加、<b>${skipped}件</b> スキップ`;
+      flash('import-msg'); input.value='';
+    }catch(err){ alert('インポートエラー: '+err.message); }
   };
-  reader.readAsText(file, 'utf-8');
+  reader.readAsText(file,'utf-8');
 }
 
 // ============================================================
 // TABS
 // ============================================================
 function sw(name){
-  const names=['record','island','analysis','log','settings'];
+  const names=['record','bulk','island','analysis','log','settings'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='island')   renderIsland();
   if(name==='analysis') renderAnalysis();
   if(name==='log')      renderLog();
+  if(name==='bulk')     renderBulkPreview();
   if(name==='settings') renderCfgDisplay();
 }
 </script>
