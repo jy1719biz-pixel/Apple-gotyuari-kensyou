@@ -1582,8 +1582,8 @@ function saveRec(){
     ccIssuer:document.getElementById('r-cc-issuer').value,
     // 下取り・キャリア
     tradein:SEL.tradein||'',
-    tradeinModel:document.getElementById('r-tradein-model').value,
-    tradeinSerial:document.getElementById('r-tradein-serial').value,
+    tradeinModel:(document.getElementById('r-tradein-model')||{value:''}).value,
+    tradeinSerial:(document.getElementById('r-tradein-serial')||{value:''}).value,
     serialUse:SEL['serial-use']||'',
     carrierContract:SEL['carrier-contract']||'',
     carrier:SEL.carrier||'',
@@ -1628,8 +1628,8 @@ function saveRec(){
   document.getElementById('r-weekday-display').textContent='注文日を選択すると自動入力されます';
   document.getElementById('r-isl').checked=false;
   document.getElementById('isl-fields').style.display='none';
-  document.getElementById('tradein-detail').style.display='none';
-  document.getElementById('carrier-detail').style.display='none';
+  const _td=document.getElementById('tradein-detail'); if(_td) _td.style.display='none';
+  const _cd=document.getElementById('carrier-detail'); if(_cd) _cd.style.display='none';
   document.querySelectorAll('.chip[data-g]').forEach(c=>c.classList.remove('on'));
   Object.keys(SEL).forEach(k=>delete SEL[k]);
   Object.keys(MULTI).forEach(k=>delete MULTI[k]);
