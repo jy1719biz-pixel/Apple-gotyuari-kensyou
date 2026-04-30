@@ -326,9 +326,9 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
     <div class="id3-title">🔑 識別3要素（最重要）— 電話番号・カード・メールアドレス</div>
 
     <div class="fr">
-      <label class="fl">📞 電話番号（下4桁）<span style="color:var(--blue);font-size:9px"> ── 使用回数・冷却状況を自動確認</span></label>
-      <input type="text" class="fi" id="r-phone" placeholder="例: 1234" maxlength="4" inputmode="numeric"
-        style="font-size:18px;font-weight:900;letter-spacing:3px"
+      <label class="fl">📞 電話番号<span style="color:var(--blue);font-size:9px"> ── 使用回数・冷却状況を自動確認</span></label>
+      <input type="text" class="fi" id="r-phone" placeholder="例: 09012345678" maxlength="11" inputmode="numeric"
+        style="font-size:15px;font-weight:900;letter-spacing:1px"
         oninput="onPhoneInput('r-phone','phone-stats-r')"
         onfocus="onPhoneInput('r-phone','phone-stats-r')">
       <div class="usage-wrap" id="phone-stats-r"><div class="usage-empty">電話番号を入力すると使用履歴が表示されます</div></div>
@@ -742,9 +742,9 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 
     <!-- アカウント -->
     <!-- 電話番号 -->
-    <div class="fr"><label class="fl">📞 電話番号（下4桁）</label>
-      <input type="text" class="fi" id="b-phone" placeholder="例: 1234" maxlength="4" inputmode="numeric"
-        style="font-size:16px;font-weight:700;letter-spacing:2px"
+    <div class="fr"><label class="fl">📞 電話番号</label>
+      <input type="text" class="fi" id="b-phone" placeholder="例: 09012345678" maxlength="11" inputmode="numeric"
+        style="font-size:14px;font-weight:700;letter-spacing:1px"
         oninput="onPhoneInput('b-phone','phone-stats-b')" onfocus="onPhoneInput('b-phone','phone-stats-b')">
       <div class="usage-wrap" id="phone-stats-b" style="margin-top:4px"><div class="usage-empty">入力で履歴表示</div></div>
     </div>
@@ -1064,8 +1064,8 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 
 
     <div class="edit-section">🔑 識別3要素</div>
-    <div class="fr"><label class="fl">📞 電話番号（下4桁）</label>
-      <input type="text" class="fi" id="e-phone" maxlength="4" inputmode="numeric" placeholder="例: 1234"
+    <div class="fr"><label class="fl">📞 電話番号</label>
+      <input type="text" class="fi" id="e-phone" maxlength="11" inputmode="numeric" placeholder="例: 09012345678"
         style="font-size:16px;font-weight:700;letter-spacing:2px"
         oninput="onPhoneInput('e-phone','phone-stats-e')" onfocus="onPhoneInput('e-phone','phone-stats-e')">
       <div class="usage-wrap" id="phone-stats-e" style="margin-top:4px"><div class="usage-empty">入力で履歴表示</div></div>
@@ -2470,7 +2470,7 @@ function onPhoneInput(inputId, statsId) {
   const val = (document.getElementById(inputId)||{}).value || '';
   if (val.length < 4) {
     const el = document.getElementById(statsId);
-    if (el) el.innerHTML = '<div class="usage-empty">下4桁を入力してください</div>';
+    if (el) el.innerHTML = '<div class="usage-empty">電話番号を入力してください</div>';
     return;
   }
   renderUsageStats(getUsageStats('phone', val, {cooldownOnlyOnSafe:true}), statsId, null);
