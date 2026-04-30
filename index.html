@@ -444,6 +444,13 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 
   <div class="card">
     <div class="card-title">📱 注文環境</div>
+    <div class="fr" style="margin-bottom:10px">
+      <label class="fl">📞 電話番号<span style="color:var(--blue);font-size:9px"> ── 最重要3点と同期</span></label>
+      <input type="text" class="fi" id="r-phone-env" placeholder="例: 09012345678" maxlength="11" inputmode="numeric"
+        style="font-size:15px;font-weight:900;letter-spacing:1px"
+        oninput="syncPhoneFromEnv(this.value)"
+        onfocus="syncPhoneFromEnv(this.value)">
+    </div>
     <div class="fr"><label class="fl">Appleアカウント ── 状態</label>
       <div class="cg" id="cg-account">
         <div class="chip" data-g="account" data-v="新規">🆕 新規</div>
@@ -1611,7 +1618,7 @@ function saveRec(){
   // reset
   ['r-ot','r-mt','r-md','r-wait','r-memo','r-delay','r-ext','r-chgmail-h','r-workaround',
    'r-cc-last4','r-cc-usecount','r-cc-issuer','r-tradein-model','r-tradein-serial','r-acct-num','r-order-no','r-email',
-   'r-cart-sec','r-days-since','r-phone','r-card-top','r-email-top']
+   'r-cart-sec','r-days-since','r-phone','r-phone-env','r-card-top','r-email-top']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const rm=document.getElementById('r-model'); if(rm) rm.value='';
   const rq=document.getElementById('r-qty'); if(rq) rq.value='1';
@@ -2399,6 +2406,12 @@ function getCooldownDays() { return cfg.cooldownDays || 30; }
 function getUsageStats(field, value, opts={}) {
   if (!value || value.length < 1) return null;
   let matching = recs.filter(r => r[field] === value);
+  // phone: 11桁入力時に旧4桁レコードも照合（後方互換）
+  if (field === 'phone') {
+    const last4 = value.slice(-4);
+    matching = recs.filter(r => r[field] === value ||
+      (r[field] && r[field].length <= 4 && r[field] === last4));
+  }
   // Apple Pay は仮想番号になるため物理カード集計から除外
   if (opts.excludeApplePay) matching = matching.filter(r => r.payment !== 'Apple Pay');
   if (!matching.length) return { count: 0, lastDate: null, daysSince: null };
@@ -2468,6 +2481,11 @@ function renderUsageStats(stats, targetId, autoFillCountId) {
 
 function onPhoneInput(inputId, statsId) {
   const val = (document.getElementById(inputId)||{}).value || '';
+  // id3-card と 注文環境欄を双方向同期
+  if (inputId === 'r-phone') {
+    const env = document.getElementById('r-phone-env');
+    if (env && env.value !== val) env.value = val;
+  }
   if (val.length < 4) {
     const el = document.getElementById(statsId);
     if (el) el.innerHTML = '<div class="usage-empty">電話番号を入力してください</div>';
@@ -2475,6 +2493,20 @@ function onPhoneInput(inputId, statsId) {
   }
   renderUsageStats(getUsageStats('phone', val, {cooldownOnlyOnSafe:true}), statsId, null);
   setTimeout(updateRiskScore, 10);
+}
+
+function syncPhoneFromEnv(val) {
+  const top = document.getElementById('r-phone');
+  if (top && top.value !== val) {
+    top.value = val;
+  }
+  if (val.length >= 4) {
+    renderUsageStats(getUsageStats('phone', val, {cooldownOnlyOnSafe:true}), 'phone-stats-r', null);
+    setTimeout(updateRiskScore, 10);
+  } else {
+    const el = document.getElementById('phone-stats-r');
+    if (el) el.innerHTML = '<div class="usage-empty">電話番号を入力してください</div>';
+  }
 }
 
 function syncCardInput(val) {
