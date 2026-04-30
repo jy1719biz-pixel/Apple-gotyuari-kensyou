@@ -1744,7 +1744,7 @@ function renderIslandGuide(){
 // ============================================================
 function updateHeader(){
   document.getElementById('hdr-total').textContent=recs.length;
-  document.getElementById('hdr-pending').textContent=recs.filter(r=>r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait)).length;
+  document.getElementById('hdr-pending').textContent=recs.filter(r=>!r.isIsl&&(r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait))).length;
   document.getElementById('hdr-island').textContent=recs.filter(r=>r.isIsl).length;
   document.getElementById('hdr-safe').textContent=recs.filter(r=>!r.isIsl&&!r.pending&&r.wait!==null&&r.wait!==undefined&&!isNaN(r.wait)).length;
 }
