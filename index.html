@@ -300,6 +300,10 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
         <div class="hdr-badge-n" id="hdr-island">0</div>
         <div class="hdr-badge-l">🏝 島流し</div>
       </div>
+      <div class="hdr-badge" style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35)">
+        <div class="hdr-badge-n" id="hdr-safe" style="color:var(--green)">0</div>
+        <div class="hdr-badge-l">ごちゅあり🍎</div>
+      </div>
     </div>
   </div>
 </div>
@@ -308,7 +312,7 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
 <div class="tabs">
   <button class="tab active" onclick="sw('record')">📝 記録</button>
   <button class="tab" onclick="sw('bulk')">📦 一括入力</button>
-  <button class="tab" onclick="sw('island')">🏝 島流し</button>
+  <button class="tab" onclick="sw('island')">島流し</button>
   <button class="tab" onclick="sw('analysis')">📊 分析</button>
   <button class="tab" onclick="sw('log')">📋 ログ</button>
   <button class="tab" onclick="sw('settings')">⚙️ 設定</button>
@@ -998,9 +1002,9 @@ input:checked+.sw-sl:before{transform:translateX(20px)}
   <div class="sec-title">📋 ログ <span id="log-cnt" style="font-size:12px;color:var(--sub)"></span></div>
   <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
     <button class="btn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--a2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('all')">全件</button>
-    <button class="btn" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:var(--o2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('pending')">⏳ 待ち中</button>
+    <button class="btn" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:var(--o2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('pending')">🍏ごちゅ待ち</button>
     <button class="btn" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--r2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('island')">🏝 島流し</button>
-    <button class="btn" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--g2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('safe')">✅ 安全</button>
+    <button class="btn" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--g2);font-size:11px;padding:7px;border-radius:8px;flex:1" onclick="filterLog('safe')">🍎ごちゅあり</button>
   </div>
   <div id="log-content"></div>
 </div>
@@ -1742,6 +1746,7 @@ function updateHeader(){
   document.getElementById('hdr-total').textContent=recs.length;
   document.getElementById('hdr-pending').textContent=recs.filter(r=>r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait)).length;
   document.getElementById('hdr-island').textContent=recs.filter(r=>r.isIsl).length;
+  document.getElementById('hdr-safe').textContent=recs.filter(r=>!r.isIsl&&!r.pending&&r.wait!==null&&r.wait!==undefined&&!isNaN(r.wait)).length;
 }
 
 // ============================================================
@@ -2171,13 +2176,13 @@ function filterLog(f){ logFilter=f; renderLog(); }
 function renderLog(){
   const el=document.getElementById('log-content');
   let data=recs;
-  if(logFilter==='pending') data=recs.filter(r=>r.pending);
+  if(logFilter==='pending') data=recs.filter(r=>r.pending&&!r.isIsl);
   if(logFilter==='island')  data=recs.filter(r=>r.isIsl&&!r.pending);
   if(logFilter==='safe')    data=recs.filter(r=>!r.isIsl&&!r.pending);
   document.getElementById('log-cnt').textContent=`(${data.length}件表示)`;
   if(!data.length){ el.innerHTML='<div class="empty">該当する記録がありません</div>'; return; }
   el.innerHTML=data.map(r=>{
-    const isPending=r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait);
+    const isPending=!r.isIsl&&(r.pending||r.wait===null||r.wait===undefined||isNaN(r.wait));
     const liClass=isPending?'pending':r.isIsl?'isl':'';
     const statusBadge=isPending
       ? '<span class="bd b-wait">⏳ ごちゅあり待ち</span>'
@@ -2391,16 +2396,27 @@ function saveEdit(){
 // ============================================================
 function getCooldownDays() { return cfg.cooldownDays || 30; }
 
-function getUsageStats(field, value) {
+function getUsageStats(field, value, opts={}) {
   if (!value || value.length < 1) return null;
-  const matching = recs.filter(r => r[field] === value);
+  let matching = recs.filter(r => r[field] === value);
+  // Apple Pay は仮想番号になるため物理カード集計から除外
+  if (opts.excludeApplePay) matching = matching.filter(r => r.payment !== 'Apple Pay');
   if (!matching.length) return { count: 0, lastDate: null, daysSince: null };
-  const sorted = [...matching].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const count = matching.length;
+  const islCount = matching.filter(r => r.isIsl).length;
+  const islRate = Math.round(islCount / count * 100);
+  // 冷却起点：ごちゅあり確定のみ（島流し・待ち中は冷却カウント開始しない）
+  const cdSource = opts.cooldownOnlyOnSafe
+    ? matching.filter(r => !r.isIsl && !r.pending)
+    : matching;
+  if (!cdSource.length) {
+    // 記録はあるが全て島流し/待ち中 → 冷却起点なし
+    return { count, lastDate: null, daysSince: null, islCount, islRate, noSafeRecord: true };
+  }
+  const sorted = [...cdSource].sort((a, b) => new Date(b.date) - new Date(a.date));
   const lastDate = sorted[0].date;
   const daysSince = Math.round((Date.now() - new Date(lastDate).getTime()) / 86400000);
-  const islCount = matching.filter(r => r.isIsl).length;
-  const islRate = Math.round(islCount / matching.length * 100);
-  return { count: matching.length, lastDate, daysSince, islCount, islRate };
+  return { count, lastDate, daysSince, islCount, islRate };
 }
 
 function renderUsageStats(stats, targetId, autoFillCountId) {
@@ -2409,6 +2425,19 @@ function renderUsageStats(stats, targetId, autoFillCountId) {
   if (!stats) { el.innerHTML = '<div class="usage-empty">入力すると使用履歴が表示されます</div>'; return; }
   if (stats.count === 0) {
     el.innerHTML = '<div class="usage-row"><span class="us-badge us-new">🆕 初使用（記録なし）</span></div>';
+    return;
+  }
+  // 冷却起点なし（全て島流し/待ち中）→ 冷却ペナルティなし、使用回数のみ表示
+  if (stats.daysSince === null) {
+    el.innerHTML = `<div class="usage-row">
+      <span class="us-badge us-count">📊 ${stats.count}回使用</span>
+      <span class="us-badge us-ok">🟢 冷却起点なし（島流しのみ）</span>
+      ${stats.islRate > 0 ? `<span class="us-badge us-ng">🏝 島流し${stats.islRate}%</span>` : ''}
+    </div>`;
+    if (autoFillCountId) {
+      const uc = document.getElementById(autoFillCountId);
+      if (uc && !uc.value) uc.value = stats.count + 1;
+    }
     return;
   }
   const cd = getCooldownDays();
@@ -2423,7 +2452,7 @@ function renderUsageStats(stats, targetId, autoFillCountId) {
   el.innerHTML = `
     <div class="usage-row">
       <span class="us-badge us-count">📊 ${stats.count}回使用</span>
-      <span class="us-badge us-date">📅 最終: ${stats.lastDate}（<b>${stats.daysSince}日前</b>）</span>
+      <span class="us-badge us-date">📅 最終ごちゅあり: ${stats.lastDate}（<b>${stats.daysSince}日前</b>）</span>
       <span class="us-badge ${statusClass}">${statusText}</span>
       ${stats.islRate > 0 ? `<span class="us-badge us-ng">🏝 島流し${stats.islRate}%</span>` : ''}
     </div>
@@ -2444,20 +2473,20 @@ function onPhoneInput(inputId, statsId) {
     if (el) el.innerHTML = '<div class="usage-empty">下4桁を入力してください</div>';
     return;
   }
-  renderUsageStats(getUsageStats('phone', val), statsId, null);
+  renderUsageStats(getUsageStats('phone', val, {cooldownOnlyOnSafe:true}), statsId, null);
   setTimeout(updateRiskScore, 10);
 }
 
 function syncCardInput(val) {
   const main = document.getElementById('r-cc-last4');
   if (main && main.value !== val) main.value = val;
-  renderUsageStats(getUsageStats('ccLast4', val), 'card-stats-r', 'r-cc-usecount');
+  renderUsageStats(getUsageStats('ccLast4', val, {excludeApplePay:true}), 'card-stats-r', 'r-cc-usecount');
   setTimeout(updateRiskScore, 10);
 }
 function syncCardFromMain(val) {
   const top = document.getElementById('r-card-top');
   if (top && top.value !== val) top.value = val;
-  renderUsageStats(getUsageStats('ccLast4', val), 'card-stats-r', 'r-cc-usecount');
+  renderUsageStats(getUsageStats('ccLast4', val, {excludeApplePay:true}), 'card-stats-r', 'r-cc-usecount');
 }
 function onCardTopInput() {
   const top = document.getElementById('r-card-top');
@@ -2572,14 +2601,14 @@ function calcRiskScore() {
   // Phone cooldown risk
   const phone=(document.getElementById('r-phone')||{value:''}).value;
   if(phone&&phone.length>=4){
-    const ps=getUsageStats('phone',phone);
+    const ps=getUsageStats('phone',phone,{cooldownOnlyOnSafe:true});
     if(ps&&ps.count>0&&ps.daysSince<getCooldownDays()){score+=20;factors.push({l:'電話冷却中?',up:true});}
   }
   // Card cooldown risk
   const card=(document.getElementById('r-card-top')||{value:''}).value||
               (document.getElementById('r-cc-last4')||{value:''}).value;
   if(card&&card.length>=4){
-    const cs=getUsageStats('ccLast4',card);
+    const cs=getUsageStats('ccLast4',card,{excludeApplePay:true});
     if(cs&&cs.count>0&&cs.daysSince<getCooldownDays()){score+=15;factors.push({l:'カード冷却中?',up:true});}
     else if(cs&&cs.count===0){score-=0;}
   }
