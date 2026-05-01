@@ -2198,7 +2198,9 @@ function renderLog(){
         : '<span class="bd b-safe">✅ 安全</span>';
     const waitDisp=isPending
       ? `<span style="font-size:13px;color:var(--o2);font-weight:700">ごちゅあり待ち中...</span>`
-      : `<span class="lmain">${r.wait}</span><span class="su">時間</span> ${speedBadge(r.wait)}`;
+      : r.isIsl
+        ? ``
+        : `<span class="lmain">${r.wait}</span><span class="su">時間</span> ${speedBadge(r.wait)}`;
     return `
     <div class="li ${liClass}">
       <div class="lt">
@@ -2512,13 +2514,13 @@ function syncPhoneFromEnv(val) {
 function syncCardInput(val) {
   const main = document.getElementById('r-cc-last4');
   if (main && main.value !== val) main.value = val;
-  renderUsageStats(getUsageStats('ccLast4', val, {excludeApplePay:true}), 'card-stats-r', 'r-cc-usecount');
+  renderUsageStats(getUsageStats('ccLast4', val, {excludeApplePay:true,cooldownOnlyOnSafe:true}), 'card-stats-r', 'r-cc-usecount');
   setTimeout(updateRiskScore, 10);
 }
 function syncCardFromMain(val) {
   const top = document.getElementById('r-card-top');
   if (top && top.value !== val) top.value = val;
-  renderUsageStats(getUsageStats('ccLast4', val, {excludeApplePay:true}), 'card-stats-r', 'r-cc-usecount');
+  renderUsageStats(getUsageStats('ccLast4', val, {excludeApplePay:true,cooldownOnlyOnSafe:true}), 'card-stats-r', 'r-cc-usecount');
 }
 function onCardTopInput() {
   const top = document.getElementById('r-card-top');
@@ -2640,7 +2642,7 @@ function calcRiskScore() {
   const card=(document.getElementById('r-card-top')||{value:''}).value||
               (document.getElementById('r-cc-last4')||{value:''}).value;
   if(card&&card.length>=4){
-    const cs=getUsageStats('ccLast4',card,{excludeApplePay:true});
+    const cs=getUsageStats('ccLast4',card,{excludeApplePay:true,cooldownOnlyOnSafe:true});
     if(cs&&cs.count>0&&cs.daysSince<getCooldownDays()){score+=15;factors.push({l:'カード冷却中?',up:true});}
     else if(cs&&cs.count===0){score-=0;}
   }
