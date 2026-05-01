@@ -2558,23 +2558,37 @@ function renderIdentitySummary() {
     return Object.entries(map)
       .sort(([,a],[,b]) => new Date(b.sort((x,y)=>new Date(y.date)-new Date(x.date))[0].date) - new Date(a.sort((x,y)=>new Date(y.date)-new Date(x.date))[0].date))
       .map(([key, items]) => {
-        const sorted=[...items].sort((a,b)=>new Date(b.date)-new Date(a.date));
-        const lastDate=sorted[0].date;
-        const daysSince=Math.round((Date.now()-new Date(lastDate).getTime())/86400000);
         const islN=items.filter(r=>r.isIsl).length;
         const rate=Math.round(islN/items.length*100);
+        const dk=key.length>28?key.slice(0,25)+'...':key;
+        // ごちゅあり確定のみ冷却起点（島流し・待ち中は除外）
+        const safeItems=items.filter(r=>!r.isIsl&&!r.pending);
+        if(!safeItems.length){
+          return `<div style="background:var(--card2);border-radius:9px;padding:9px 11px;margin-bottom:6px;border:1px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <span style="font-size:12px;font-weight:700">${icon} ${dk}</span>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">
+                <span class="us-badge us-count">使用${items.length}回</span>
+                ${rate>0?`<span class="us-badge us-ng">🏝${rate}%</span>`:''}
+                <span class="us-badge us-ok">🟢 冷却起点なし（島流しのみ）</span>
+              </div>
+            </div>
+          </div>`;
+        }
+        const sorted=[...safeItems].sort((a,b)=>new Date(b.date)-new Date(a.date));
+        const lastDate=sorted[0].date;
+        const daysSince=Math.round((Date.now()-new Date(lastDate).getTime())/86400000);
         const pct_=Math.min(100,Math.round(daysSince/cd*100));
         let sc,st;
         if(daysSince>=cd){sc='us-ok';st='🟢 使用可能';}
         else if(daysSince>=Math.floor(cd*0.5)){sc='us-warn';st='🟡 要注意';}
         else{sc='us-ng';st='🔴 冷却中';}
-        const dk=key.length>28?key.slice(0,25)+'...':key;
         return `<div style="background:var(--card2);border-radius:9px;padding:9px 11px;margin-bottom:6px;border:1px solid var(--border)">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
             <span style="font-size:12px;font-weight:700">${icon} ${dk}</span>
             <div style="display:flex;gap:5px;flex-wrap:wrap">
               <span class="us-badge us-count">使用${items.length}回</span>
-              <span class="us-badge us-date">${lastDate}（${daysSince}日前）</span>
+              <span class="us-badge us-date">最終ごちゅあり:${lastDate}（${daysSince}日前）</span>
               ${rate>0?`<span class="us-badge us-ng">🏝${rate}%</span>`:''}
               <span class="us-badge ${sc}">${st}</span>
             </div>
